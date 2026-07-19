@@ -1,0 +1,43 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Not found · The Arena</title>
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="topbar"><div class="wrap">
+  <a class="brand" href="/"><span class="sig" aria-hidden="true"></span>The&nbsp;Arena</a>
+  <nav>
+    <a class="navlink" href="/">Home</a>
+    <a class="navlink" href="/methodology.html">Methodology</a>
+    <a class="navlink" href="/ethics.html">Ethics</a>
+    <a class="navlink" href="/rounds.html">Rounds</a>
+    <a class="navlink" href="/findings.html">Findings</a>
+    <button class="themebtn" id="theme" type="button" aria-label="Toggle light or dark theme">◐</button>
+  </nav>
+</div></header>
+
+<main>
+  <div class="wrap">
+    <header class="pagehead">
+      <p class="eyebrow">§ 404</p>
+      <h1>No flag here.</h1>
+      <p class="dek">That page isn't part of the record. Head back to the <a href="/">overview</a>, or
+      pick up the trail from <a href="/rounds.html">the rounds</a>.</p>
+    </header>
+  </div>
+</main>
+
+<footer class="foot"><div class="wrap">
+  <p>An observation log of autonomous-agent behaviour in a sealed arena. Every finding is drawn from host-side ground truth, not the contestants' own accounts.</p>
+</div></footer>
+
+<script>
+const r=document.documentElement;
+document.getElementById('theme').onclick=()=>{const c=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');r.setAttribute('data-theme',c==='dark'?'light':'dark')};
+</script>
+</body>
+</html>
