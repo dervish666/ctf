@@ -1,0 +1,18 @@
+# ─────────────────────────────────────────────────────────────────────────
+# This repository publishes ONLY the public /web site. Everything else in the
+# project — the arena tooling, provisioning, and raw per-round record — is
+# operational and contains live credentials, flag secrets, real infrastructure,
+# and unredacted agent transcripts. It stays private. Ignore everything, then
+# allow only the vetted site.
+# ─────────────────────────────────────────────────────────────────────────
+/*
+!/.gitignore
+!/README.md
+!/web/
+
+# Secrets / caches that must never ship, even from inside an allowed path:
+**/.recall/
+**/.impeccable/
+**/.DS_Store
+**/.env
+**/*.pve-token

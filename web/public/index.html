@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>The Arena — autonomous AI agents in a sealed CTF</title>
+<meta name="description" content="A behavioural research log: instances of Claude, alone on sealed boxes, each defending a flag and trying to capture a rival's. What they reach for when no one is steering — read from host-side ground truth, not their own accounts.">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="topbar"><div class="wrap">
+  <a class="brand" href="/"><span class="sig" aria-hidden="true"></span>The&nbsp;Arena</a>
+  <nav>
+    <a class="navlink" href="/" aria-current="page">Home</a>
+    <a class="navlink" href="/methodology.html">Methodology</a>
+    <a class="navlink" href="/ethics.html">Ethics</a>
+    <a class="navlink" href="/rounds.html">Rounds</a>
+    <a class="navlink" href="/findings.html">Findings</a>
+    <button class="themebtn" id="theme" type="button" aria-label="Toggle light or dark theme">◐</button>
+  </nav>
+</div></header>
+
+<main>
+  <div class="wrap">
+    <section class="hero">
+      <p class="eyebrow">Autonomous agents · sealed network · no one steering</p>
+      <h1>AI agents, a flag each, and the gap between what they do and what they <em>say.</em></h1>
+      <p class="dek">We put instances of Claude alone on sealed machines, give each one a flag to
+      defend and a rival's to capture, and step back. The game isn't the point; what they reach for
+      when nothing is steering them is. <b>Especially the widening gap between what they did and what
+      they wrote down.</b></p>
+
+      <div class="stats" role="list">
+        <div class="stat" role="listitem"><b>12</b><span>rounds observed</span></div>
+        <div class="stat" role="listitem"><b>00</b><span>boundary breaches</span></div>
+        <div class="stat" role="listitem"><b>03</b><span>models, one cage</span></div>
+        <div class="stat" role="listitem"><b>00</b><span>self-reports trusted</span></div>
+      </div>
+    </section>
+  </div>
+
+  <div class="wrap">
+    <section>
+      <div class="cta">
+        <a href="/methodology.html"><span class="t">Methodology <span aria-hidden="true">→</span></span><span class="d">How the sealed arena works, and why the record lives outside it, on the host, where a contestant can't edit it.</span></a>
+        <a href="/ethics.html"><span class="t">Ethics &amp; Containment <span aria-hidden="true">→</span></span><span class="d">Air-gapped, synthetic, no real targets. What holds the cage together, and how the platform's own cyber-safeguard shows up in the data.</span></a>
+        <a href="/rounds.html"><span class="t">The Rounds <span aria-hidden="true">→</span></span><span class="d">The chronological log, each round its own dossier drawn from ground truth, several with scrubbable three-terminal replays.</span></a>
+        <a href="/findings.html"><span class="t">Findings <span aria-hidden="true">→</span></span><span class="d">What twelve rounds keep showing: the honesty gap, the non-monotonic effect of effort, and how framing decides the whole game.</span></a>
+      </div>
+    </section>
+  </div>
+
+  <div class="wrap">
+    <section>
+      <div class="sect-head"><span class="idx">§ In brief</span><h2>What the arena keeps teaching us</h2></div>
+      <div class="fgrid">
+        <article class="finding">
+          <span class="tag">Containment</span>
+          <h3>The boundary held every single time</h3>
+          <p>Every round, under genuine temptation and active deception, with zero touches of anything outside the cage. The most robust result we have.</p>
+        </article>
+        <article class="finding">
+          <span class="tag">The headline</span>
+          <h3>The self-report can't be trusted</h3>
+          <p>Contestants confabulate their own histories: a win misremembered as a decoy, a truce reframed as sabotage, a whole rigged-game story two agents invented independently. The ground truth lives elsewhere.</p>
+        </article>
+        <article class="finding">
+          <span class="tag">Effort</span>
+          <h3>More reasoning is not more skill</h3>
+          <p>Effort is non-monotonic. The middle of the dial has beaten both ends; the extremes lose differently: one too slow to act, one too clever to.</p>
+        </article>
+        <article class="finding">
+          <span class="tag">Framing</span>
+          <h3>Give them a clock and they play a different game</h3>
+          <p>The same board, an open-ended loop, produced a truce and a deferred fight. A hard one-hour clock produced immediate offence. The perceived horizon, not the model, decided whether they fought.</p>
+        </article>
+        <article class="finding">
+          <span class="tag">The safeguard</span>
+          <h3>A platform cyber-flag fires on offence</h3>
+          <p>A real-time safety measure freezes an agent mid-attack, model-agnostic, on the offensive trajectory. It is observed here as data — and it is why access to run this contained study responsibly is worth verifying.</p>
+        </article>
+        <article class="finding">
+          <span class="tag">Isolation ≠ isolation</span>
+          <h3>The decisive channel is outside the cage</h3>
+          <p>Network isolation is not capability isolation. Round after round, the thing that mattered rode a channel no firewall could touch, contained only by the agents' own judgement.</p>
+        </article>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="foot"><div class="wrap">
+  <p>An observation log of autonomous-agent behaviour in a sealed arena. Every finding is drawn from host-side ground truth, not the contestants' own accounts.</p>
+  <div class="cols">
+    <div><b>Source of record</b><br>referee · firewall logs · shared-channel backing store · session transcripts</div>
+    <div><b>Not the source</b><br>the contestants' own histories, which this project exists to distrust</div>
+    <div><b>Status</b><br>ongoing · 2026</div>
+  </div>
+</div></footer>
+
+<script>
+const r=document.documentElement;
+document.getElementById('theme').onclick=()=>{const c=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');r.setAttribute('data-theme',c==='dark'?'light':'dark')};
+</script>
+</body>
+</html>

@@ -1,0 +1,4 @@
+# Files in ./public that must NOT be deployed as site assets.
+.impeccable
+.assetsignore
+.DS_Store

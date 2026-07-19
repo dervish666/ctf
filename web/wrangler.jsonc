@@ -1,0 +1,15 @@
+{
+  // The Arena — public research site. Assets-only Worker (no script): Cloudflare
+  // serves the static files in ./public directly. Deploy:  npx wrangler deploy
+  "name": "ctf-arena",
+  "compatibility_date": "2026-07-19",
+  "assets": {
+    "directory": "./public",
+    // multi-page static site (not an SPA): serve our own 404 for unknown paths
+    "not_found_handling": "404-page"
+  },
+  // bind the custom domain (scratch-it.co.uk must be a zone on this Cloudflare account)
+  "routes": [
+    { "pattern": "ctf.scratch-it.co.uk", "custom_domain": true }
+  ]
+}

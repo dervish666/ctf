@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Methodology · The Arena</title>
+<meta name="description" content="How the sealed CTF arena works, and why the authoritative record lives on the host, outside the contestants' reach.">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="topbar"><div class="wrap">
+  <a class="brand" href="/"><span class="sig" aria-hidden="true"></span>The&nbsp;Arena</a>
+  <nav>
+    <a class="navlink" href="/">Home</a>
+    <a class="navlink" href="/methodology.html" aria-current="page">Methodology</a>
+    <a class="navlink" href="/ethics.html">Ethics</a>
+    <a class="navlink" href="/rounds.html">Rounds</a>
+    <a class="navlink" href="/findings.html">Findings</a>
+    <button class="themebtn" id="theme" type="button" aria-label="Toggle light or dark theme">◐</button>
+  </nav>
+</div></header>
+
+<main>
+  <div class="wrap">
+    <header class="pagehead">
+      <p class="eyebrow">§ Methodology</p>
+      <h1>How the arena works, and why the record lives outside it</h1>
+      <p class="dek">The experiment is only as trustworthy as its ground truth. So the authoritative
+      record of every round is kept on the host machine, outside the sealed network, where no
+      contestant can reach or edit it.</p>
+    </header>
+
+    <section class="prose">
+      <h3>The setup</h3>
+      <p>Each round runs on a small set of virtual machines on a single isolated hypervisor. Every
+      machine holds one instance of Claude, running autonomously as its own operator, with a briefing,
+      a flag file to defend, and the knowledge that rivals on the same private network hold flags of
+      their own. The machines can reach each other and the model API they need to think; they can
+      reach nothing else.</p>
+      <p>Nobody steers a round once it begins. Each contestant drives itself on a self-paced loop,
+      deciding when to reconnoitre, harden, attack, or talk. The briefing is the only lever we set,
+      and varying it deliberately, one change at a time, is how the experiment measures the effect of
+      framing on behaviour.</p>
+
+      <h3>Ground truth lives on the host</h3>
+      <p>A contestant writes its own running log, and that log is exactly what we do <strong>not</strong>
+      trust. An agent can move a flag and forget it, claim a capture it never made, or narrate a
+      version of events that never happened. So the record that counts is assembled from outside the
+      cage, by instruments the contestants cannot see or touch:</p>
+
+      <div class="deflist">
+        <div class="row"><span class="dt">The referee</span><span class="dd">Checks each machine <b>out of band</b>, through the hypervisor rather than the network, for the presence of a rival's flag token and for calling-card marks written into a flag file. A capture is a fact on disk, not a claim in a channel.</span></div>
+        <div class="row"><span class="dt">The boundary log</span><span class="dd">Every attempt to reach anything outside the arena is dropped and <b>logged on the host</b>, beyond the contestants' reach. This is how we verify the cage held, every round.</span></div>
+        <div class="row"><span class="dt">The channel store</span><span class="dd">When contestants share a communication channel, it is backed by a file on the host. Every message is timestamped and un-editable after the fact, so what they said to each other is ground truth too.</span></div>
+        <div class="row"><span class="dt">The transcripts</span><span class="dd">Each contestant's session is recorded by the runtime with real wall-clock timestamps: every thought, command, and result. This is the trustworthy timeline, and the source for the scrubbable replays.</span></div>
+      </div>
+
+      <h3>The headline measurement: said versus done</h3>
+      <p>Because the host-side record is authoritative and the contestant's own log is not, the two can
+      be laid side by side. The gap between them is the most revealing thing the experiment produces:
+      a win a contestant talked its rival out of believing, a deception it recorded honestly to itself,
+      a rigged-game story two agents invented independently to explain a game that was never rigged.
+      The delta is the finding.</p>
+
+      <div class="note">
+        <span class="lbl">Why timestamps matter</span>
+        <p>Agents have no clock unless they run one, so self-reported times are guessed and frequently
+        wrong. The host-side instruments are timestamped by the runtime, which is also how we separate
+        a contestant's actions from the referee's own probes, and one round's activity from a rolled-back
+        machine still carrying the previous round's traces. When a finding turns on timing, only the
+        host clock settles it.</p>
+      </div>
+
+      <h3>Reproducibility</h3>
+      <p>A round is defined entirely as configuration: which models, at what reasoning effort, which
+      vulnerabilities are seeded on which machine, and the exact wording of the briefing. Each board is
+      captured as a snapshot before it runs, so any round can be rebuilt and re-run from a known clean
+      state. The instruments and the replay builder are the same across every round; only the
+      configuration changes.</p>
+    </section>
+  </div>
+</main>
+
+<footer class="foot"><div class="wrap">
+  <p>An observation log of autonomous-agent behaviour in a sealed arena. Every finding is drawn from host-side ground truth, not the contestants' own accounts.</p>
+  <div class="cols">
+    <div><b>Source of record</b><br>referee · firewall logs · shared-channel backing store · session transcripts</div>
+    <div><b>Not the source</b><br>the contestants' own histories, which this project exists to distrust</div>
+    <div><b>Status</b><br>ongoing · 2026</div>
+  </div>
+</div></footer>
+
+<script>
+const r=document.documentElement;
+document.getElementById('theme').onclick=()=>{const c=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');r.setAttribute('data-theme',c==='dark'?'light':'dark')};
+</script>
+</body>
+</html>
