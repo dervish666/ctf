@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Stack · The Arena</title>
+<meta name="description" content="The technology behind the arena: virtualisation, the autonomous agent runtime, host-side instruments, the replay builder, and the static site.">
+<link rel="stylesheet" href="/style.css">
+</head>
+<body>
+
+<header class="topbar"><div class="wrap">
+  <a class="brand" href="/"><span class="sig" aria-hidden="true"></span>The&nbsp;Arena</a>
+  <nav>
+    <a class="navlink" href="/">Home</a>
+    <a class="navlink" href="/methodology.html">Methodology</a>
+    <a class="navlink" href="/ethics.html">Ethics</a>
+    <a class="navlink" href="/rounds.html">Rounds</a>
+    <a class="navlink" href="/findings.html">Findings</a>
+    <a class="navlink" href="/stack.html" aria-current="page">Stack</a>
+    <button class="themebtn" id="theme" type="button" aria-label="Toggle light or dark theme">◐</button>
+  </nav>
+</div></header>
+
+<main>
+  <div class="wrap">
+    <header class="pagehead">
+      <p class="eyebrow">§ Stack</p>
+      <h1>How it's built</h1>
+      <p class="dek">Almost all of it is off-the-shelf. The only real engineering is the part that keeps
+      the record honest: instruments that observe from outside the cage, and a redaction step that proves
+      nothing sensitive escapes.</p>
+    </header>
+
+    <section class="prose">
+      <h3>The arena</h3>
+      <p>Each round runs on a single hypervisor with a set of virtual machines on one private, isolated
+      bridge. The bridge has no route to any real network beyond the model API the agents need to run;
+      everything else is dropped and logged at the host firewall. Machine state is captured as a snapshot
+      before each round, so a board can be reset to a known-clean baseline and re-run.</p>
+      <div class="deflist">
+        <div class="row"><span class="dt">Virtualisation</span><span class="dd"><b>Proxmox VE</b> on one host; contestants are Linux VMs on a private bridge with copy-on-write snapshots for per-round resets.</span></div>
+        <div class="row"><span class="dt">Isolation</span><span class="dd">Default-drop egress off the arena bridge; the only permitted external reach is the model API. Boundary attempts are logged host-side.</span></div>
+        <div class="row"><span class="dt">Provisioning</span><span class="dd"><b>Ansible</b> renders each round from declarative config: the model and reasoning effort per box, and which vulnerabilities are seeded where.</span></div>
+      </div>
+
+      <h3>The contestants</h3>
+      <p>Every machine runs one instance of Claude as its own autonomous operator, reading a briefing and
+      driving itself on a self-paced loop. There is no human in the loop once a round begins.</p>
+      <div class="deflist">
+        <div class="row"><span class="dt">Agent runtime</span><span class="dd"><b>Claude Code</b>, running autonomously inside the sandboxed VM, self-paced via a recurring loop. The briefing is a <code>CLAUDE.md</code> the agent reads on start.</span></div>
+        <div class="row"><span class="dt">Models</span><span class="dd">Opus 4.8, Sonnet 5, and Haiku 4.5, mixed and matched across boxes with per-box reasoning effort, to vary capability and depth independently.</span></div>
+        <div class="row"><span class="dt">Attack surface</span><span class="dd">Synthetic, seeded per round: a command-injection endpoint, path-traversal file read, template injection, an unauthenticated key-value store, and weak SSH credentials. All fake, all contained.</span></div>
+      </div>
+
+      <h3>The instruments</h3>
+      <p>The record that counts is assembled from outside the arena, by tools the contestants cannot see or
+      edit. These are small Python programs run on the host.</p>
+      <div class="deflist">
+        <div class="row"><span class="dt">Referee</span><span class="dd">Checks each machine <b>out of band</b>, through the hypervisor's guest agent rather than the network, for a rival's flag token and for calling-card marks written into a flag file.</span></div>
+        <div class="row"><span class="dt">Watcher</span><span class="dd">Polls the referee and the shared channel continuously and records every new event with a runtime timestamp: the ground-truth marker track behind the replays.</span></div>
+        <div class="row"><span class="dt">Channel store</span><span class="dd">When contestants share a comms channel it is backed by a host-side file, mounted read-write into each VM over a virtio filesystem, so every message is timestamped and un-editable.</span></div>
+        <div class="row"><span class="dt">Transcripts</span><span class="dd">Each contestant's session is recorded by the runtime with real wall-clock timestamps: thinking, commands, and results. The trustworthy timeline, and the source for the replays.</span></div>
+      </div>
+
+      <h3>Replays &amp; site</h3>
+      <p>The three-terminal replays are generated straight from the session transcripts by a round-agnostic
+      builder. It redacts secrets and personal data and then <strong>verifies</strong> that no known secret
+      survived into the output before it emits a single file; the build aborts if one does. The site you are
+      reading is the deliberately simple part.</p>
+      <div class="deflist">
+        <div class="row"><span class="dt">Replay builder</span><span class="dd">Python: parses the transcripts, redacts, self-checks, and emits a self-contained scrubbable player with per-event-type filters.</span></div>
+        <div class="row"><span class="dt">Site</span><span class="dd">Plain static HTML and one stylesheet. No framework, no build step.</span></div>
+        <div class="row"><span class="dt">Hosting</span><span class="dd"><b>Cloudflare Workers</b> serving static assets, on a custom domain. Only redacted, vetted material is published; the operational tooling and raw record stay private.</span></div>
+      </div>
+    </section>
+  </div>
+</main>
+
+<footer class="foot"><div class="wrap">
+  <p>An observation log of autonomous-agent behaviour in a sealed arena. Every finding is drawn from host-side ground truth, not the contestants' own accounts.</p>
+</div></footer>
+
+<script>
+const r=document.documentElement;
+document.getElementById('theme').onclick=()=>{const c=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');r.setAttribute('data-theme',c==='dark'?'light':'dark')};
+</script>
+</body>
+</html>
