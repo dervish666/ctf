@@ -1,35 +1,39 @@
 /* The Arena — shared design system. Observation-log aesthetic: serif display,
    sodium-amber accent, mono for data. Both themes. */
 :root{
+  color-scheme:light;
   --bg:#e7eaec; --bg-raised:#f5f6f7; --bg-inset:#dde2e5;
   --border:#ccd3d8; --border-strong:#b1bbc2;
-  --text:#151c22; --text-dim:#525f69; --text-faint:#83919a;
-  --accent:#985607; --accent-soft:rgba(152,86,7,.10);
-  --good:#2c7a6b; --warn:#ab3529; --anomaly:#6a49ad; --slate:#5c6a74;
+  --text:#151c22; --text-dim:#525f69; --text-faint:#5b6770;
+  --accent:#925000; --accent-soft:rgba(146,80,0,.10);
+  --good:#227163; --warn:#ab3529; --anomaly:#6a49ad; --slate:#5a6771;
   --shadow:0 1px 0 rgba(20,28,34,.04), 0 12px 30px -22px rgba(20,28,34,.5);
 }
 @media (prefers-color-scheme:dark){:root{
+  color-scheme:dark;
   --bg:#0d1216; --bg-raised:#141c22; --bg-inset:#090e12;
   --border:#232e37; --border-strong:#35434e;
-  --text:#e7ecf0; --text-dim:#95a2ac; --text-faint:#5f6e78;
+  --text:#e7ecf0; --text-dim:#95a2ac; --text-faint:#8595a0;
   --accent:#e8a33d; --accent-soft:rgba(232,163,61,.12);
-  --good:#54bfaa; --warn:#e0655b; --anomaly:#b092ea; --slate:#7c8b96;
+  --good:#54bfaa; --warn:#eb6e64; --anomaly:#b092ea; --slate:#8b9aa6;
   --shadow:0 1px 0 rgba(0,0,0,.3), 0 20px 40px -30px rgba(0,0,0,.9);
 }}
 :root[data-theme="dark"]{
+  color-scheme:dark;
   --bg:#0d1216; --bg-raised:#141c22; --bg-inset:#090e12;
   --border:#232e37; --border-strong:#35434e;
-  --text:#e7ecf0; --text-dim:#95a2ac; --text-faint:#5f6e78;
+  --text:#e7ecf0; --text-dim:#95a2ac; --text-faint:#8595a0;
   --accent:#e8a33d; --accent-soft:rgba(232,163,61,.12);
-  --good:#54bfaa; --warn:#e0655b; --anomaly:#b092ea; --slate:#7c8b96;
+  --good:#54bfaa; --warn:#eb6e64; --anomaly:#b092ea; --slate:#8b9aa6;
   --shadow:0 1px 0 rgba(0,0,0,.3), 0 20px 40px -30px rgba(0,0,0,.9);
 }
 :root[data-theme="light"]{
+  color-scheme:light;
   --bg:#e7eaec; --bg-raised:#f5f6f7; --bg-inset:#dde2e5;
   --border:#ccd3d8; --border-strong:#b1bbc2;
-  --text:#151c22; --text-dim:#525f69; --text-faint:#83919a;
-  --accent:#985607; --accent-soft:rgba(152,86,7,.10);
-  --good:#2c7a6b; --warn:#ab3529; --anomaly:#6a49ad; --slate:#5c6a74;
+  --text:#151c22; --text-dim:#525f69; --text-faint:#5b6770;
+  --accent:#925000; --accent-soft:rgba(146,80,0,.10);
+  --good:#227163; --warn:#ab3529; --anomaly:#6a49ad; --slate:#5a6771;
   --shadow:0 1px 0 rgba(20,28,34,.04), 0 12px 30px -22px rgba(20,28,34,.5);
 }
 
@@ -45,25 +49,44 @@ body{margin:0; background:var(--bg); color:var(--text);
 .prose{max-width:66ch}
 a{color:var(--accent); text-decoration:none; border-bottom:1px solid color-mix(in srgb,var(--accent) 40%,transparent)}
 a:hover{border-bottom-color:var(--accent)}
-code{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:.88em; background:var(--bg-inset); border:1px solid var(--border); border-radius:4px; padding:1px 5px}
-:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:2px}
+code{font-family:ui-monospace,"SF Mono",Menlo,monospace; font-size:.88em; background:var(--bg-inset); border:1px solid var(--border); border-radius:3px; padding:1px 5px}
+:focus-visible{outline:2px solid var(--accent); outline-offset:3px; border-radius:3px}
 .eyebrow{font-size:.72rem; letter-spacing:.19em; text-transform:uppercase; color:var(--accent)}
+
+/* ---- skip link: first tab stop, visible only when focused ---- */
+.skip{position:absolute; left:12px; top:-60px; z-index:30; border:1px solid var(--border-strong);
+  background:var(--bg-raised); color:var(--text); border-radius:5px; padding:10px 16px;
+  font-family:ui-monospace,Menlo,monospace; font-size:.7rem; letter-spacing:.11em; text-transform:uppercase;
+  transition:top .15s}
+.skip:focus{top:10px}
 
 /* ---- nav ---- */
 .topbar{border-bottom:1px solid var(--border); position:sticky; top:0; z-index:20;
   background:color-mix(in srgb,var(--bg) 88%,transparent); backdrop-filter:blur(8px)}
 .topbar .wrap{display:flex; align-items:center; gap:16px; height:54px}
-.brand{display:flex; align-items:center; gap:9px; font-size:.74rem; letter-spacing:.15em; text-transform:uppercase; color:var(--text); border:0}
+.brand{position:relative; display:flex; align-items:center; gap:9px; font-size:.74rem; letter-spacing:.15em; text-transform:uppercase; color:var(--text); border:0}
+.brand::after{content:""; position:absolute; inset:-12px 0}
 .sig{width:8px; height:8px; border-radius:50%; background:var(--accent); animation:ping 2.6s ease-out infinite; flex:none}
 @keyframes ping{0%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 55%,transparent)}70%,100%{box-shadow:0 0 0 7px transparent}}
 nav{margin-left:auto; display:flex; align-items:center; gap:2px; flex-wrap:wrap}
-.navlink{font-size:.68rem; letter-spacing:.09em; text-transform:uppercase; color:var(--text-dim); border:0;
+.navlink{position:relative; font-size:.68rem; letter-spacing:.09em; text-transform:uppercase; color:var(--text-dim); border:0;
   padding:6px 10px; border-radius:100px; transition:color .15s, background .15s}
+/* 30px pill, 44px touch target: expand the hit area vertically only, so adjacent links never overlap. */
+.navlink::after{content:""; position:absolute; inset:-7px 0}
 .navlink:hover{color:var(--text); background:var(--accent-soft)}
 .navlink[aria-current="page"]{color:var(--accent); background:var(--accent-soft)}
-.themebtn{margin-left:6px; background:var(--bg-inset); border:1px solid var(--border); color:var(--text-dim); cursor:pointer;
+.themebtn{position:relative; margin-left:6px; background:var(--bg-inset); border:1px solid var(--border); color:var(--text-dim); cursor:pointer;
   border-radius:100px; width:30px; height:30px; font-size:.8rem; display:grid; place-items:center; flex:none}
+.themebtn::after{content:""; position:absolute; inset:-8px}
+.themebtn:hover{color:var(--text); border-color:var(--border-strong)}
 @media(max-width:640px){.topbar .wrap{height:auto; padding-top:9px; padding-bottom:9px; flex-wrap:wrap} nav{margin-left:0; width:100%}}
+
+/* ---- back-to-home link (sub-pages) ---- */
+.backhome{display:inline-flex; align-items:center; gap:7px; margin:18px 0 -8px; border:0;
+  font-size:.7rem; letter-spacing:.11em; text-transform:uppercase; color:var(--text-dim);
+  transition:color .15s, gap .15s}
+.backhome:hover{color:var(--accent); gap:11px}
+.backhome .arw{font-size:.95rem; line-height:1}
 
 /* ---- hero + page head ---- */
 .hero{padding:clamp(48px,9vw,96px) 0 clamp(30px,5vw,52px)}
@@ -83,7 +106,9 @@ section{padding:clamp(40px,7vw,72px) 0}
 .sect-head .idx{font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--accent); padding-top:.3em;
   font-family:ui-monospace,Menlo,monospace; white-space:nowrap}
 .prose p{margin:0 0 1.15em}
-.prose h3{font-size:1.18rem; font-weight:600; letter-spacing:-.005em; margin:2em 0 .5em; text-wrap:balance}
+.prose h2{font-size:1.18rem; font-weight:600; letter-spacing:-.005em; margin:2em 0 .5em; text-wrap:balance}
+.prose h2:first-child{margin-top:0}
+.prose h3{font-size:1.04rem; font-weight:600; letter-spacing:-.003em; margin:1.6em 0 .4em; text-wrap:balance}
 .prose h3:first-child{margin-top:0}
 .prose strong{color:var(--text); font-weight:600}
 .prose ul,.prose ol{margin:0 0 1.2em; padding-left:1.3em}
@@ -92,7 +117,7 @@ section{padding:clamp(40px,7vw,72px) 0}
 .lead{font-size:1.14rem; color:var(--text); line-height:1.6; max-width:62ch}
 
 /* ---- callout / note box ---- */
-.note{border:1px solid var(--border-strong); border-radius:6px;
+.note{border:1px solid var(--border-strong); border-radius:5px;
   background:var(--bg-raised); padding:16px 20px; margin:1.6em 0; box-shadow:var(--shadow)}
 .note .lbl{font-family:ui-monospace,Menlo,monospace; font-size:.64rem; letter-spacing:.13em; text-transform:uppercase; color:var(--accent); display:block; margin-bottom:6px}
 .note.good .lbl{color:var(--good)}
@@ -148,7 +173,7 @@ summary.row:hover,details[open]>summary.row{background:var(--accent-soft)}
 details[open] .rnum{color:var(--accent)}
 .rmid{min-width:0}
 .matchup{font-size:.72rem; letter-spacing:.03em; color:var(--text-dim); display:block; margin-bottom:3px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
-.rtitle{font-size:1.05rem; font-weight:600; line-height:1.24; letter-spacing:-.005em}
+.rtitle{margin:0; font-size:1.05rem; font-weight:600; line-height:1.24; letter-spacing:-.005em}
 .rright{display:flex; align-items:center; gap:12px}
 .chip{font-size:.62rem; letter-spacing:.1em; text-transform:uppercase; padding:4px 9px; border-radius:100px; white-space:nowrap; border:1px solid currentColor; font-family:ui-monospace,Menlo,monospace}
 .chip--capture{color:var(--warn)} .chip--draw{color:var(--good)} .chip--anomaly{color:var(--anomaly)} .chip--stalemate{color:var(--slate)}

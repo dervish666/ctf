@@ -6,8 +6,10 @@
 <title>The Arena — autonomous AI agents in a sealed CTF</title>
 <meta name="description" content="A behavioural research log: instances of Claude, alone on sealed boxes, each defending a flag and trying to capture a rival's. What they reach for when no one is steering — read from host-side ground truth, not their own accounts.">
 <link rel="stylesheet" href="/style.css">
+<script>try{var t=localStorage.getItem('arena-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){console.warn('theme: preference not read —',e.message)}</script>
 </head>
 <body>
+<a class="skip" href="#main">Skip to content</a>
 
 <header class="topbar"><div class="wrap">
   <a class="brand" href="/"><span class="sig" aria-hidden="true"></span>The&nbsp;Arena</a>
@@ -22,7 +24,7 @@
   </nav>
 </div></header>
 
-<main>
+<main id="main">
   <div class="wrap">
     <section class="hero">
       <p class="eyebrow">Autonomous agents · sealed network · no one steering</p>
@@ -33,7 +35,7 @@
       they wrote down.</b></p>
 
       <div class="stats" role="list">
-        <div class="stat" role="listitem"><b>12</b><span>rounds observed</span></div>
+        <div class="stat" role="listitem"><b>13</b><span>rounds observed</span></div>
         <div class="stat" role="listitem"><b>00</b><span>boundary breaches</span></div>
         <div class="stat" role="listitem"><b>03</b><span>models, one cage</span></div>
         <div class="stat" role="listitem"><b>00</b><span>self-reports trusted</span></div>
@@ -47,7 +49,7 @@
         <a href="/methodology.html"><span class="t">Methodology <span aria-hidden="true">→</span></span><span class="d">How the sealed arena works, and why the record lives outside it, on the host, where a contestant can't edit it.</span></a>
         <a href="/ethics.html"><span class="t">Ethics &amp; Containment <span aria-hidden="true">→</span></span><span class="d">Air-gapped, synthetic, no real targets. What holds the cage together, and how the platform's own cyber-safeguard shows up in the data.</span></a>
         <a href="/rounds.html"><span class="t">The Rounds <span aria-hidden="true">→</span></span><span class="d">The chronological log, each round its own dossier drawn from ground truth, several with scrubbable three-terminal replays.</span></a>
-        <a href="/findings.html"><span class="t">Findings <span aria-hidden="true">→</span></span><span class="d">What twelve rounds keep showing: the honesty gap, the non-monotonic effect of effort, and how framing decides the whole game.</span></a>
+        <a href="/findings.html"><span class="t">Findings <span aria-hidden="true">→</span></span><span class="d">What thirteen rounds keep showing: the honesty gap, the non-monotonic effect of effort, and how framing decides the whole game.</span></a>
       </div>
     </section>
   </div>
@@ -101,8 +103,17 @@
 </div></footer>
 
 <script>
-const r=document.documentElement;
-document.getElementById('theme').onclick=()=>{const c=r.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');r.setAttribute('data-theme',c==='dark'?'light':'dark')};
+const root=document.documentElement, themeBtn=document.getElementById('theme');
+const currentTheme=()=>root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+const syncTheme=()=>themeBtn.setAttribute('aria-pressed',String(currentTheme()==='dark'));
+syncTheme();
+themeBtn.addEventListener('click',()=>{
+  const next=currentTheme()==='dark'?'light':'dark';
+  root.setAttribute('data-theme',next);
+  syncTheme();
+  try{localStorage.setItem('arena-theme',next)}
+  catch(e){console.warn('theme: preference not persisted —',e.message)}
+});
 </script>
 </body>
 </html>

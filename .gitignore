@@ -8,6 +8,7 @@
 /*
 !/.gitignore
 !/README.md
+!/CHANGELOG.md
 !/web/
 
 # Secrets / caches that must never ship, even from inside an allowed path:
