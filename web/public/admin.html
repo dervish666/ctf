@@ -1,0 +1,219 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>Review queue — The Arena</title>
+<link rel="stylesheet" href="/style.css">
+<script>try{var t=localStorage.getItem('arena-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){console.warn('theme: preference not read —',e.message)}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar"><div class="wrap">
+  <a class="brand" href="/"><span class="sig" aria-hidden="true"></span>The&nbsp;Arena</a>
+  <nav>
+    <a class="navlink" href="/vote.html">Ballot</a>
+    <a class="navlink" href="/configure.html">Builder</a>
+    <button class="themebtn" id="theme" type="button" aria-label="Toggle light or dark theme">◐</button>
+  </nav>
+</div></header>
+
+<main id="main"><div class="wrap">
+  <header class="pagehead">
+    <span class="eyebrow">§ Internal</span>
+    <h1>Review queue</h1>
+    <p class="dek">Proposed rounds waiting on a human. Nothing here is visible on the public ballot until it is
+    approved. This page holds no privilege of its own: the token below is what the API checks.</p>
+  </header>
+
+  <section>
+    <div class="field" style="max-width:460px">
+      <label for="token">Admin token</label>
+      <input id="token" type="password" autocomplete="current-password" placeholder="paste the admin token"
+        style="width:100%; min-height:38px; background:var(--bg-inset); color:var(--text);
+               border:1px solid var(--border-strong); border-radius:5px; padding:8px 9px;
+               font-family:ui-monospace,Menlo,monospace; font-size:.84rem">
+      <p class="footnote" style="margin-top:6px">Held in this tab only, and forgotten when it closes.</p>
+    </div>
+    <div class="actions" style="max-width:460px">
+      <button class="btn btn--primary" type="button" id="load">Load queue</button>
+    </div>
+    <p class="toast" id="toast" role="status" aria-live="polite"></p>
+
+    <div class="tally" id="queue" hidden style="margin-top:22px"></div>
+    <div class="empty" id="empty" hidden style="margin-top:22px">Queue is empty. Nothing waiting.</div>
+  </section>
+</div></main>
+
+<script type="module">
+/* Submitter free text is the whole reason this page exists, so it is written
+   with textContent exclusively. Never innerHTML here, whatever the temptation. */
+
+const $ = (s) => document.querySelector(s);
+const token = () => sessionStorage.getItem('arena-admin') || '';
+
+function toast(message, isError) {
+  const t = $('#toast');
+  t.textContent = message;
+  t.className = `toast${isError ? ' bad' : ''}`;
+}
+
+async function api(path, options = {}) {
+  const res = await fetch(path, {
+    ...options,
+    headers: { ...(options.headers || {}), authorization: `Bearer ${token()}` },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+  return data;
+}
+
+function field(label, value) {
+  const p = document.createElement('p');
+  p.className = 'footnote';
+  p.style.margin = '0';
+  const b = document.createElement('b');
+  b.textContent = `${label}: `;
+  p.appendChild(b);
+  p.appendChild(document.createTextNode(value));
+  return p;
+}
+
+function decide(id, status, note) {
+  return api('/api/admin/review', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ id, status, note }),
+  });
+}
+
+function row(item) {
+  const el = document.createElement('div');
+  el.className = 'trow';
+
+  const head = document.createElement('div');
+  head.className = 'thead';
+  const rank = document.createElement('span');
+  rank.className = 'rank';
+  rank.textContent = `#${item.id}`;
+  head.appendChild(rank);
+  const name = document.createElement('h2');
+  name.className = 'tname';
+  name.textContent = item.title;
+  head.appendChild(name);
+  el.appendChild(head);
+
+  el.appendChild(field('Proposed', new Date(item.created_at * 1000).toISOString().replace('T', ' ').slice(0, 16)));
+  el.appendChild(field('Compute weight', String(item.spec.cost_estimate)));
+
+  if (item.rationale) {
+    const why = document.createElement('p');
+    why.className = 'footnote';
+    why.style.cssText = 'margin:0; border-left:2px solid var(--accent); padding-left:11px; font-style:italic';
+    why.textContent = item.rationale;
+    el.appendChild(why);
+  }
+
+  if (item.claude_md_patch) {
+    const label = document.createElement('p');
+    label.className = 'footnote';
+    label.style.cssText = 'margin:0; color:var(--warn); font-weight:600';
+    label.textContent = 'Proposed briefing change — read this in full before approving:';
+    el.appendChild(label);
+    const pre = document.createElement('pre');
+    pre.className = 'specbox';
+    pre.tabIndex = 0;
+    pre.style.whiteSpace = 'pre-wrap';
+    pre.textContent = item.claude_md_patch;
+    el.appendChild(pre);
+  }
+
+  const spec = document.createElement('details');
+  const summary = document.createElement('summary');
+  summary.style.cssText = 'cursor:pointer; font-size:.82rem; color:var(--accent)';
+  summary.textContent = 'Specification';
+  spec.appendChild(summary);
+  const pre = document.createElement('pre');
+  pre.className = 'specbox';
+  pre.tabIndex = 0;
+  pre.textContent = JSON.stringify(item.spec, null, 2);
+  spec.appendChild(pre);
+  el.appendChild(spec);
+
+  const actions = document.createElement('div');
+  actions.className = 'actions';
+  const mk = (text, status, primary) => {
+    const b = document.createElement('button');
+    b.type = 'button';
+    b.className = `btn${primary ? ' btn--primary' : ''}`;
+    b.textContent = text;
+    b.addEventListener('click', async () => {
+      b.disabled = true;
+      try {
+        await decide(item.id, status, null);
+        toast(`#${item.id} ${status}.`);
+        el.remove();
+        if (!document.querySelectorAll('#queue .trow').length) {
+          $('#queue').hidden = true;
+          $('#empty').hidden = false;
+        }
+      } catch (e) {
+        console.error('review: failed —', e.message);
+        toast(`Could not update #${item.id}: ${e.message}`, true);
+        b.disabled = false;
+      }
+    });
+    return b;
+  };
+  actions.appendChild(mk('Reject', 'rejected'));
+  actions.appendChild(mk('Approve → ballot', 'approved', true));
+  el.appendChild(actions);
+  return el;
+}
+
+$('#load').addEventListener('click', async () => {
+  const value = $('#token').value.trim();
+  if (value) sessionStorage.setItem('arena-admin', value);
+  if (!token()) { toast('Enter the admin token first.', true); return; }
+
+  toast('Loading…');
+  try {
+    const data = await api('/api/admin/queue');
+    const queue = $('#queue');
+    queue.textContent = '';
+    if (!data.pending.length) {
+      queue.hidden = true;
+      $('#empty').hidden = false;
+      toast('Queue is empty.');
+      return;
+    }
+    data.pending.forEach((item) => queue.appendChild(row(item)));
+    queue.hidden = false;
+    $('#empty').hidden = true;
+    toast(`${data.pending.length} waiting.`);
+  } catch (e) {
+    console.error('queue: failed —', e.message);
+    toast(`Could not load the queue: ${e.message}`, true);
+  }
+});
+
+if (token()) $('#load').click();
+</script>
+
+<script>
+const root=document.documentElement, themeBtn=document.getElementById('theme');
+const currentTheme=()=>root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+const syncTheme=()=>themeBtn.setAttribute('aria-pressed',String(currentTheme()==='dark'));
+syncTheme();
+themeBtn.addEventListener('click',()=>{
+  const next=currentTheme()==='dark'?'light':'dark';
+  root.setAttribute('data-theme',next);
+  syncTheme();
+  try{localStorage.setItem('arena-theme',next)}
+  catch(e){console.warn('theme: preference not persisted —',e.message)}
+});
+</script>
+</body>
+</html>

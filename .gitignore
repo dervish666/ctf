@@ -16,5 +16,7 @@
 **/.impeccable/
 **/.DS_Store
 **/.env
+**/.dev.vars
+**/.admin-token
 **/*.pve-token
 **/.wrangler/

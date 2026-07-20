@@ -28,6 +28,10 @@ disk. Only material that has passed the project's redaction step is made public.
   three-terminal replays.
 - **Findings** — what the rounds keep showing: the honesty gap, the non-monotonic
   effect of effort, and how framing decides the whole game.
+- **Configure & Vote** — the round builder and the ballot. A reader can specify a
+  round, propose an edit to the agent briefing, and vote on which configuration
+  runs next. Proposals are reviewed before they appear, and the winning
+  specification is re-validated by the controller before anything is provisioned.
 
 ## Releases
 

@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Vote on the next round — The Arena</title>
+<meta name="description" content="The ranked ballot of proposed rounds for the sealed-arena CTF. Vote for the matchup, board and briefing you want to see run next.">
+<link rel="stylesheet" href="/style.css">
+<script>try{var t=localStorage.getItem('arena-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){console.warn('theme: preference not read —',e.message)}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar"><div class="wrap">
+  <a class="brand" href="/"><span class="sig" aria-hidden="true"></span>The&nbsp;Arena</a>
+  <nav>
+    <a class="navlink" href="/">Home</a>
+    <a class="navlink" href="/methodology.html">Methodology</a>
+    <a class="navlink" href="/ethics.html">Ethics</a>
+    <a class="navlink" href="/rounds.html">Rounds</a>
+    <a class="navlink" href="/findings.html">Findings</a>
+    <a class="navlink" href="/stack.html">Stack</a>
+    <a class="navlink" href="/configure.html">Configure</a>
+    <a class="navlink" href="/vote.html" aria-current="page">Vote</a>
+    <button class="themebtn" id="theme" type="button" aria-label="Toggle light or dark theme">◐</button>
+  </nav>
+</div></header>
+
+<main id="main">
+  <div class="wrap">
+    <header class="pagehead">
+      <span class="eyebrow">§ Ballot</span>
+      <h1>Vote on the next round</h1>
+      <p class="dek">Rounds proposed on the <a href="/configure.html">builder</a>, ranked by votes. Each one is a
+      complete specification: who plays, what they can break into, how the briefing frames it.
+      <b>The top of this list is what gets run next.</b></p>
+    </header>
+  </div>
+
+  <div class="wrap">
+    <section>
+      <div class="note">
+        <span class="lbl">What this vote does, and does not, decide</span>
+        <p>It decides which configuration gets provisioned next, and nothing else. It does not decide what the
+        result means, whether a round counts, or what goes in the findings, because a vote cannot settle those and
+        pretending otherwise would undermine the record it is attached to. A round that produces nothing still
+        gets written up as a round that produced nothing.</p>
+        <p style="margin-bottom:0">Identity here is a cookie you can clear, so the counts are a signal rather than
+        a poll. With numbers this small, one determined person could move the ranking. Read it as interest, not as
+        a mandate.</p>
+      </div>
+
+      <div id="status" class="footnote" role="status" aria-live="polite">Loading the ballot…</div>
+      <div class="tally" id="tally" hidden></div>
+
+      <div class="empty" id="empty" hidden>
+        <p style="margin-top:0"><b>Nothing on the ballot yet.</b></p>
+        <p style="margin-bottom:0">Every proposal is read by a human before it appears here, so there may be some
+        waiting in the queue. <a href="/configure.html">Build a round</a> and it joins them.</p>
+      </div>
+
+      <div id="cf-widget" style="margin-top:22px"></div>
+      <p class="toast" id="toast" role="status" aria-live="polite"></p>
+
+      <p class="footnote">Want something that is not on this list? The builder has the full menu, including the
+      briefing itself, which is the one part of a round that is not a fixed set of choices.
+      <a href="/configure.html">Build a round →</a></p>
+    </section>
+  </div>
+</main>
+
+<footer class="foot"><div class="wrap">
+  <p>An observation log of autonomous-agent behaviour in a sealed arena. Every finding is drawn from host-side ground truth, not the contestants' own accounts.</p>
+  <div class="cols">
+    <div><b>Source of record</b><br>referee · firewall logs · shared-channel backing store · session transcripts</div>
+    <div><b>Not the source</b><br>the contestants' own histories, which this project exists to distrust</div>
+    <div><b>Status</b><br>ongoing · 2026</div>
+  </div>
+</div></footer>
+
+<script>
+/* Turnstile's own onload callback, not the script tag's load event: window.turnstile
+   is populated asynchronously after the script fires `load`, so listening for `load`
+   races and can leave the widget unrendered. */
+window.turnstileReady = new Promise((resolve) => { window.onloadTurnstileCallback = resolve; });
+</script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onloadTurnstileCallback" async defer></script>
+
+<script type="module">
+/* Every value that originated with a submitter is written with textContent and
+   never interpolated into markup. The Worker also withholds free text until a
+   human has approved the row, so this is the second of two independent guards
+   rather than the only one. */
+
+const $ = (s) => document.querySelector(s);
+const SHORT = { 'claude-haiku-4-5-20251001': 'Haiku', 'claude-sonnet-5': 'Sonnet', 'claude-opus-4-8': 'Opus', 'claude-fable-5': 'Fable' };
+const STATUS_LABEL = { approved: null, scheduled: 'queued to run', ran: 'already run' };
+
+let widget = null;
+let submissionsOpen = false;
+
+function toast(message, isError) {
+  const t = $('#toast');
+  t.textContent = message;
+  t.className = `toast${isError ? ' bad' : ''}`;
+}
+
+function specSummary(spec) {
+  const boxes = spec.contestants;
+  const allSame = boxes.every((b) => b.model === boxes[0].model);
+  const who = allSame
+    ? `${SHORT[boxes[0].model]} ×${boxes.length} at ${boxes.map((b) => b.effort).join(' / ')}`
+    : boxes.map((b) => `${SHORT[b.model]} at ${b.effort}`).join(', ');
+  const laneCount = new Set(boxes.flatMap((b) => b.lanes)).size;
+  const board = laneCount ? `${laneCount} distinct weakness${laneCount === 1 ? '' : 'es'} seeded` : 'no way in seeded';
+  const flag = spec.flag_world_writable ? 'flag writable by anyone'
+    : spec.flag_root_only ? 'flag readable only by root' : 'flag readable by any intruder';
+  const clock = spec.time_limit === 'none' ? 'open-ended' : `stops after ${spec.time_limit}`;
+  return `${who}. ${board}, ${flag}. Acting every ${spec.loop}, ${clock}.`;
+}
+
+function row(variant, rank, topVotes) {
+  const el = document.createElement('div');
+  el.className = 'trow';
+
+  const head = document.createElement('div');
+  head.className = 'thead';
+
+  const rankEl = document.createElement('span');
+  rankEl.className = 'rank';
+  rankEl.textContent = String(rank).padStart(2, '0');
+  head.appendChild(rankEl);
+
+  const name = document.createElement('h2');
+  name.className = 'tname';
+  name.textContent = variant.title;
+  head.appendChild(name);
+
+  const flag = STATUS_LABEL[variant.status];
+  if (flag) {
+    const chip = document.createElement('span');
+    chip.className = 'chip chip--mute';
+    chip.textContent = variant.round_no ? `${flag} · round ${variant.round_no}` : flag;
+    head.appendChild(chip);
+  }
+  if (variant.has_briefing_edit) {
+    const chip = document.createElement('span');
+    chip.className = 'chip chip--on';
+    chip.textContent = 'edited briefing';
+    head.appendChild(chip);
+  }
+
+  const button = document.createElement('button');
+  button.className = 'votebtn';
+  button.type = 'button';
+  button.style.marginLeft = 'auto';
+  button.setAttribute('aria-pressed', String(variant.voted));
+  button.textContent = variant.voted ? '✓ voted' : 'Vote';
+  button.disabled = !submissionsOpen || variant.status === 'ran';
+  button.addEventListener('click', () => castVote(variant, button));
+  head.appendChild(button);
+  el.appendChild(head);
+
+  const summary = document.createElement('p');
+  summary.className = 'footnote';
+  summary.style.margin = '0';
+  summary.textContent = specSummary(variant.spec);
+  el.appendChild(summary);
+
+  if (variant.rationale) {
+    const why = document.createElement('p');
+    why.className = 'footnote';
+    why.style.cssText = 'margin:0; border-left:2px solid var(--border-strong); padding-left:11px; font-style:italic';
+    why.textContent = variant.rationale;
+    el.appendChild(why);
+  }
+
+  if (variant.claude_md_patch) {
+    const details = document.createElement('details');
+    const summaryEl = document.createElement('summary');
+    summaryEl.style.cssText = 'cursor:pointer; font-size:.82rem; color:var(--accent)';
+    summaryEl.textContent = 'Read the proposed briefing change';
+    details.appendChild(summaryEl);
+    const pre = document.createElement('pre');
+    pre.className = 'specbox';
+    pre.tabIndex = 0;
+    pre.setAttribute('role', 'group');
+    pre.setAttribute('aria-label', 'Proposed briefing change');
+    pre.style.whiteSpace = 'pre-wrap';
+    pre.textContent = variant.claude_md_patch;
+    details.appendChild(pre);
+    el.appendChild(details);
+  }
+
+  const bar = document.createElement('div');
+  bar.className = 'bar';
+  const fill = document.createElement('div');
+  fill.className = 'fill';
+  fill.style.transform = `scaleX(${topVotes ? variant.votes / topVotes : 0})`;
+  bar.appendChild(fill);
+  el.appendChild(bar);
+
+  const num = document.createElement('div');
+  num.className = 'num';
+  num.textContent = `${variant.votes} vote${variant.votes === 1 ? '' : 's'} · proposed ${new Date(variant.created_at * 1000).toISOString().slice(0, 10)} · #${variant.id}`;
+  el.appendChild(num);
+
+  el.dataset.variantId = String(variant.id);
+  el._variant = variant;
+  el._fill = fill;
+  el._num = num;
+  return el;
+}
+
+async function castVote(variant, button) {
+  if (!submissionsOpen) { toast('Voting is closed right now.', true); return; }
+  const token = widget !== null ? window.turnstile.getResponse(widget) : '';
+  if (!token) { toast('Complete the human check below, then vote.', true); return; }
+
+  const next = !variant.voted;
+  button.disabled = true;
+  try {
+    const res = await fetch('/api/vote', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ variant_id: variant.id, vote: next, turnstile_token: token }),
+    });
+    const data = await res.json();
+    if (!res.ok) { toast(data.error || 'That vote was not accepted.', true); return; }
+
+    variant.voted = next;
+    variant.votes = data.votes;
+    button.setAttribute('aria-pressed', String(next));
+    button.textContent = next ? '✓ voted' : 'Vote';
+    toast(next ? `Vote recorded for #${variant.id}.` : `Vote withdrawn from #${variant.id}.`);
+    redrawBars();
+  } catch (e) {
+    console.error('vote: request failed —', e.message);
+    toast('The vote did not go through. Nothing was recorded.', true);
+  } finally {
+    if (widget !== null) window.turnstile.reset(widget);
+    button.disabled = false;
+  }
+}
+
+/* Bars are relative to the leader, so a vote anywhere rescales the whole column.
+   Redraw in place rather than rebuilding the list: a rebuild would drop focus
+   from the button the voter just pressed. */
+function redrawBars() {
+  const rows = [...document.querySelectorAll('.trow')];
+  const top = Math.max(1, ...rows.map((r) => r._variant.votes));
+  rows.forEach((r) => {
+    r._fill.style.transform = `scaleX(${r._variant.votes / top})`;
+    r._num.textContent = `${r._variant.votes} vote${r._variant.votes === 1 ? '' : 's'} · proposed ${new Date(r._variant.created_at * 1000).toISOString().slice(0, 10)} · #${r._variant.id}`;
+  });
+}
+
+/**
+ * Mount the human check, tolerating its absence. challenges.cloudflare.com is
+ * blocked by plenty of ad blockers and corporate filters; without this guard that
+ * case throws and leaves dead vote buttons with no explanation, which reads as a
+ * broken site rather than a blocked script.
+ */
+async function mountTurnstile(container, sitekey, action) {
+  try {
+    await Promise.race([
+      window.turnstileReady,
+      new Promise((_, reject) => setTimeout(() => reject(new Error('timed out after 8s')), 8000)),
+    ]);
+    if (typeof window.turnstile?.render !== 'function') {
+      throw new Error('turnstile loaded but exposed no render()');
+    }
+    return window.turnstile.render(container, { sitekey, theme: 'auto', action });
+  } catch (e) {
+    console.error('turnstile: unavailable —', e.message);
+    return null;
+  }
+}
+
+fetch('/api/ballot')
+  .then((r) => (r.ok ? r.json() : Promise.reject(new Error(`HTTP ${r.status}`))))
+  .then(async (data) => {
+    submissionsOpen = data.submissions_open && data.turnstile_site_key;
+    const tally = $('#tally');
+    const variants = data.variants || [];
+
+    if (!variants.length) {
+      $('#status').hidden = true;
+      $('#empty').hidden = false;
+    } else {
+      const top = Math.max(1, ...variants.map((v) => v.votes));
+      variants.forEach((v, i) => tally.appendChild(row(v, i + 1, top)));
+      tally.hidden = false;
+      const total = variants.reduce((sum, v) => sum + v.votes, 0);
+      $('#status').textContent = `${variants.length} proposed round${variants.length === 1 ? '' : 's'}, ${total} vote${total === 1 ? '' : 's'} cast.`;
+    }
+
+    if (!submissionsOpen) {
+      toast('Voting is closed right now.', true);
+      return;
+    }
+    widget = await mountTurnstile('#cf-widget', data.turnstile_site_key, 'vote');
+    if (widget === null) {
+      submissionsOpen = false;
+      document.querySelectorAll('.votebtn').forEach((b) => { b.disabled = true; });
+      toast('The human check could not load, so voting is disabled. An extension or network '
+        + 'filter is probably blocking it. The ranking above is still current.', true);
+    }
+  })
+  .catch((e) => {
+    console.error('ballot: could not load —', e.message);
+    $('#status').textContent = 'The ballot could not be loaded. That is a fault at our end, not yours.';
+  });
+</script>
+
+<script>
+const root=document.documentElement, themeBtn=document.getElementById('theme');
+const currentTheme=()=>root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+const syncTheme=()=>themeBtn.setAttribute('aria-pressed',String(currentTheme()==='dark'));
+syncTheme();
+themeBtn.addEventListener('click',()=>{
+  const next=currentTheme()==='dark'?'light':'dark';
+  root.setAttribute('data-theme',next);
+  syncTheme();
+  try{localStorage.setItem('arena-theme',next)}
+  catch(e){console.warn('theme: preference not persisted —',e.message)}
+});
+</script>
+</body>
+</html>

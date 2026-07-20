@@ -1,13 +1,44 @@
 {
-  // The Arena — public research site. Assets-only Worker (no script): Cloudflare
-  // serves the static files in ./public directly. Deploy:  npx wrangler deploy
+  // The Arena — public research site + the round ballot.
+  //
+  // Was an assets-only Worker; it now carries a script, but ONLY for /api/*.
+  // `run_worker_first` is scoped to that prefix, so every editorial page is
+  // still served straight from ./public exactly as before, with no Worker
+  // invocation and no change to its caching.
+  //
+  // Deploy:  npx wrangler deploy
   "name": "ctf-arena",
+  "main": "src/index.js",
   "compatibility_date": "2026-07-19",
+
   "assets": {
     "directory": "./public",
+    "binding": "ASSETS",
     // multi-page static site (not an SPA): serve our own 404 for unknown paths
-    "not_found_handling": "404-page"
+    "not_found_handling": "404-page",
+    // Only the API reaches the script. Everything else is pure static assets.
+    "run_worker_first": ["/api/*"]
   },
+
+  // The ballot: variants, votes, rate-limit buckets. Schema in ./schema.sql.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "ctf-arena-ballot",
+      "database_id": "f99cf95e-7c30-44b8-a1a0-430cee7e1702"
+    }
+  ],
+
+  // Public value — the Turnstile site key is rendered into the page by design.
+  // Set it here after creating the widget in the Cloudflare dashboard.
+  // The three SECRETS are never in this file; set them with `wrangler secret put`:
+  //   BALLOT_SECRET     signs the voter cookie and salts the IP hash
+  //   TURNSTILE_SECRET  server-side half of the human check
+  //   ADMIN_TOKEN       bearer token for the review queue
+  "vars": {
+    "TURNSTILE_SITE_KEY": "0x4AAAAAAD5_2zyM0ot34uLc"
+  },
+
   // bind the custom domain (scratch-it.co.uk must be a zone on this Cloudflare account)
   "routes": [
     { "pattern": "ctf.scratch-it.co.uk", "custom_domain": true }

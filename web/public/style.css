@@ -192,4 +192,155 @@ details[open] .caret{transform:rotate(225deg)}
 .replay-link:hover{border-color:var(--accent); background:var(--accent-soft)}
 .replay-link .play{font-size:.68rem}
 
+/* ── the builder + the ballot ──────────────────────────────────────────────
+   Form surfaces for configure.html and vote.html. Two rules govern everything
+   below. (1) State lives in the native input, and CSS reads it with :has() —
+   never a JS-toggled class, so the accessibility tree and the pixels cannot
+   disagree. (2) Ink on the amber accent is var(--bg-inset), never #fff: white
+   on #e8a33d is 2.16:1 in dark theme and fails AA outright. */
+
+.vh{position:absolute; width:1px; height:1px; margin:-1px; padding:0; overflow:hidden;
+  clip:rect(0 0 0 0); clip-path:inset(50%); white-space:nowrap; border:0}
+
+/* An author-origin `display` beats the UA stylesheet's [hidden]{display:none}, so
+   any element given a display below (.tally, .grid, .cards…) would keep rendering
+   while its hidden property was true. Restore the intent once, globally. */
+[hidden]{display:none !important}
+
+.grid{display:grid; grid-template-columns:minmax(0,1fr) 330px; gap:clamp(20px,3vw,38px);
+  align-items:start; padding:clamp(24px,4vw,40px) 0 clamp(50px,8vw,80px)}
+@media(max-width:920px){.grid{grid-template-columns:1fr}}
+
+/* Sub-section inside .grid. The bare `section` rule's clamp(40px,7vw,72px)
+   padding is right for editorial prose and far too airy for stacked form blocks. */
+.blk{padding:0; margin-bottom:clamp(26px,4vw,38px)}
+.blk .sect-head{margin-bottom:15px}
+.blk .sect-head h2{font-size:1.14rem}
+.sect-head .hint{margin-left:auto; font-size:.75rem; color:var(--text-faint); font-style:italic; text-align:right}
+fieldset{border:0; margin:0; padding:0; min-width:0}
+legend{padding:0}
+
+/* contestant cards */
+.boxes{display:grid; grid-template-columns:repeat(3,1fr); gap:12px}
+@media(max-width:620px){.boxes{grid-template-columns:1fr}}
+.boxcard{background:var(--bg-raised); border:1px solid var(--border); border-radius:7px;
+  padding:15px 14px; display:flex; flex-direction:column; gap:11px; box-shadow:var(--shadow)}
+.boxcard .bid{font-family:ui-monospace,Menlo,monospace; font-size:.74rem; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--text-dim)}
+.field label{display:block; font-size:.68rem; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--text-dim); margin-bottom:5px}
+/* Same step as .tgl-d, deliberately: the caption reuses an existing size rather
+   than introducing another one a fraction away from it. */
+.boxnote{margin:0; font-size:.73rem; line-height:1.4; color:var(--text-dim)}
+select{width:100%; min-height:38px; background:var(--bg-inset); color:var(--text);
+  border:1px solid var(--border-strong); border-radius:5px; padding:8px 9px; font-size:.84rem;
+  font-family:ui-monospace,Menlo,monospace; cursor:pointer}
+select:hover{border-color:var(--accent)}
+
+/* radio / checkbox cards. The input stays in the DOM, focusable and checkable;
+   .vh hides it visually and :has() reads it back out. */
+.cards{display:grid; gap:9px}
+.cards.two{grid-template-columns:1fr 1fr}
+@media(max-width:620px){.cards.two{grid-template-columns:1fr}}
+.opt{display:block; position:relative; cursor:pointer; background:var(--bg-raised);
+  border:1px solid var(--border); border-radius:7px; padding:13px 15px;
+  transition:border-color .15s, background .15s}
+.opt:hover{border-color:var(--border-strong)}
+.opt:has(input:checked){border-color:var(--accent); background:var(--accent-soft)}
+/* Focus lives on the hidden input, so forward its ring to the card — without
+   this, keyboard users navigate the whole form blind. */
+.opt:has(input:focus-visible){outline:2px solid var(--accent); outline-offset:2px}
+.opt .ot{font-weight:600; font-size:.98rem; display:flex; align-items:center; gap:9px; flex-wrap:wrap}
+/* Selection is never carried by colour alone. */
+.opt:has(input:checked) .ot::after{content:"✓ selected"; font-family:ui-monospace,Menlo,monospace;
+  font-size:.58rem; letter-spacing:.1em; text-transform:uppercase; color:var(--accent)}
+.opt .od{color:var(--text-dim); font-size:.85rem; margin-top:4px; line-height:1.45}
+.opt .tag{font-family:ui-monospace,Menlo,monospace; font-size:.58rem; letter-spacing:.09em;
+  text-transform:uppercase; border:1px solid currentColor; border-radius:100px; padding:2px 7px; color:var(--slate)}
+.opt .tag--warn{color:var(--warn)} .opt .tag--good{color:var(--good)}
+
+/* framing switches */
+.chips{display:flex; flex-wrap:wrap; gap:9px}
+.toggle{display:inline-flex; align-items:center; gap:9px; min-height:44px; cursor:pointer;
+  background:var(--bg-raised); border:1px solid var(--border); border-radius:100px;
+  padding:8px 16px 8px 12px; transition:border-color .15s, background .15s}
+.toggle:hover{border-color:var(--border-strong)}
+.toggle:has(input:checked){border-color:var(--accent); background:var(--accent-soft)}
+.toggle:has(input:focus-visible){outline:2px solid var(--accent); outline-offset:2px}
+.tgl-dot{width:30px; height:17px; border-radius:100px; background:var(--bg-inset);
+  border:1px solid var(--border-strong); position:relative; flex:none; transition:background .15s}
+.tgl-dot::after{content:""; position:absolute; top:1px; left:1px; width:13px; height:13px;
+  border-radius:50%; background:var(--text-dim); transition:transform .15s, background .15s}
+.toggle:has(input:checked) .tgl-dot{background:var(--accent); border-color:var(--accent)}
+/* var(--bg-inset), not #fff — a white knob on amber is 2.16:1 and fails SC 1.4.11. */
+.toggle:has(input:checked) .tgl-dot::after{transform:translateX(13px); background:var(--bg-inset)}
+.tgl-t{font-size:.87rem; font-weight:600}
+.tgl-d{display:block; font-size:.73rem; color:var(--text-dim); font-weight:400; margin-top:1px}
+
+/* the summary rail */
+.card{position:sticky; top:70px; background:var(--bg-raised); border:1px solid var(--border-strong);
+  border-radius:7px; box-shadow:var(--shadow); overflow:hidden}
+@media(max-width:920px){.card{position:static}}
+.card .ch{padding:13px 17px; border-bottom:1px solid var(--border); display:flex; align-items:center; gap:9px}
+.card .ch h3{margin:0; font-size:.98rem; font-weight:600}
+.card .cb{padding:15px 17px}
+/* Scoped override: the bare .matchup is the ledger row's small dim label. */
+.card .matchup{font-size:.92rem; font-weight:600; line-height:1.4; color:var(--text); white-space:normal}
+.sumchips{display:flex; flex-wrap:wrap; gap:6px; margin-top:12px}
+.chip--on{border-color:var(--accent); color:var(--accent)}
+.chip--mute{color:var(--text-faint)}
+
+.specbox{margin-top:14px; background:var(--bg-inset); border:1px solid var(--border); border-radius:5px;
+  padding:11px 12px; font-family:ui-monospace,Menlo,monospace; font-size:.78rem; line-height:1.5;
+  color:var(--text); max-height:230px; overflow:auto; white-space:pre; overscroll-behavior:contain}
+
+.meter{margin-top:13px}
+.meter .mlabel{display:flex; justify-content:space-between; font-family:ui-monospace,Menlo,monospace;
+  font-size:.66rem; letter-spacing:.09em; text-transform:uppercase; color:var(--text-dim); margin-bottom:5px}
+.meter .mtrack{height:5px; border-radius:100px; background:var(--bg-inset); border:1px solid var(--border); overflow:hidden}
+/* scaleX, not width: a compositor-only transition, no layout pass per frame. */
+.meter .mfill{height:100%; width:100%; background:var(--accent); transform:scaleX(0);
+  transform-origin:left center; transition:transform .2s}
+
+.actions{display:flex; gap:8px; margin-top:14px; flex-wrap:wrap}
+.btn{flex:1 1 auto; min-height:44px; border:1px solid var(--border-strong); background:var(--bg-inset);
+  color:var(--text); cursor:pointer; border-radius:5px; padding:10px 14px; font:inherit; font-size:.84rem;
+  transition:background .15s, border-color .15s}
+.btn:hover:not(:disabled){border-color:var(--accent); background:var(--accent-soft)}
+.btn:disabled{opacity:.55; cursor:not-allowed}
+/* Ink is --bg-inset: 4.77:1 light, 8.99:1 dark. #fff here would be 2.16:1 dark. */
+.btn--primary{background:var(--accent); color:var(--bg-inset); border-color:var(--accent); font-weight:600;
+  font-family:ui-monospace,Menlo,monospace; letter-spacing:.03em}
+.btn--primary:hover:not(:disabled){filter:brightness(1.07); background:var(--accent)}
+
+.toast{margin-top:11px; font-size:.8rem; line-height:1.45; color:var(--good); min-height:1.2em}
+.toast.bad{color:var(--warn)}
+.footnote{color:var(--text-dim); font-size:.82rem; margin-top:20px; max-width:62ch; line-height:1.55}
+
+.warnlist{margin:13px 0 0; padding:0; list-style:none; display:grid; gap:7px}
+.warnlist li{font-size:.82rem; line-height:1.45; color:var(--text-dim); border-left:2px solid var(--warn);
+  padding:2px 0 2px 11px}
+
+/* the ballot */
+.tally{display:grid; gap:1px; background:var(--border); border:1px solid var(--border); border-radius:5px; overflow:hidden}
+.tally .trow{background:var(--bg); padding:15px 17px; display:grid; gap:9px}
+.tally .thead{display:flex; align-items:baseline; gap:11px; flex-wrap:wrap}
+.tally .rank{font-family:ui-monospace,Menlo,monospace; font-size:.9rem; color:var(--text-faint);
+  font-variant-numeric:tabular-nums; flex:none}
+.tally .tname{margin:0; font-size:1.02rem; font-weight:600; line-height:1.3; letter-spacing:-.004em}
+.tally .bar{height:6px; border-radius:100px; background:var(--bg-inset); border:1px solid var(--border); overflow:hidden}
+.tally .fill{height:100%; width:100%; background:var(--accent); transform:scaleX(0);
+  transform-origin:left center; transition:transform .25s}
+.tally .num{font-family:ui-monospace,Menlo,monospace; font-size:.72rem; color:var(--text-dim);
+  font-variant-numeric:tabular-nums}
+.votebtn{min-height:38px; border:1px solid var(--border-strong); background:var(--bg-inset); color:var(--text);
+  cursor:pointer; border-radius:100px; padding:7px 15px; font:inherit; font-size:.78rem;
+  font-family:ui-monospace,Menlo,monospace; letter-spacing:.03em; white-space:nowrap;
+  transition:background .15s, border-color .15s, color .15s}
+.votebtn:hover:not(:disabled){border-color:var(--accent); color:var(--accent)}
+.votebtn[aria-pressed="true"]{background:var(--accent); color:var(--bg-inset); border-color:var(--accent); font-weight:600}
+.votebtn:disabled{opacity:.55; cursor:not-allowed}
+.empty{border:1px dashed var(--border-strong); border-radius:7px; padding:clamp(24px,5vw,40px);
+  text-align:center; color:var(--text-dim)}
+
 @media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}html{scroll-behavior:auto}}

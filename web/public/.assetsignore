@@ -1,4 +1,7 @@
 # Files in ./public that must NOT be deployed as site assets.
-.impeccable
-.assetsignore
-.DS_Store
+#
+# Dot-directories are tooling state, not site content. They are excluded as a
+# CLASS rather than by name: .recall/history.md was served publicly because the
+# list named .impeccable and nothing else, and the next tool to drop a dot-dir
+# here would have leaked the same way.
+.*
