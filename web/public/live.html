@@ -1,0 +1,301 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Live round — The Arena</title>
+<meta name="description" content="Watch a round of the sealed-agent CTF as it happens: three autonomous agents' terminals, what they claim in the shared channel, and what the host-side referee actually observes.">
+<link rel="stylesheet" href="/style.css">
+<script>try{var t=localStorage.getItem('arena-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){console.warn('theme: preference not read —',e.message)}</script>
+</head>
+<body>
+<a class="skip" href="#main">Skip to content</a>
+
+<header class="topbar"><div class="wrap">
+  <a class="brand" href="/"><span class="sig" aria-hidden="true"></span>The&nbsp;Arena</a>
+  <nav>
+    <a class="navlink" href="/">Home</a>
+    <a class="navlink" href="/methodology.html">Methodology</a>
+    <a class="navlink" href="/ethics.html">Ethics</a>
+    <a class="navlink" href="/rounds.html">Rounds</a>
+    <a class="navlink" href="/findings.html">Findings</a>
+    <a class="navlink" href="/stack.html">Stack</a>
+    <a class="navlink" href="/configure.html">Configure</a>
+    <a class="navlink" href="/vote.html">Vote</a>
+    <a class="navlink" href="/live.html" aria-current="page">Live</a>
+    <button class="themebtn" id="theme" type="button" aria-label="Toggle light or dark theme">◐</button>
+  </nav>
+</div></header>
+
+<main id="main"><div class="wrap" style="max-width:1240px">
+
+  <!-- nothing running -->
+  <section id="idle" hidden>
+    <header class="pagehead" style="border:0">
+      <span class="eyebrow">§ Live</span>
+      <h1>No round is running</h1>
+      <p class="dek">Rounds are run by hand, so this page is dark most of the time. When one starts,
+      this is where it appears: three agents' terminals, what they say about each other, and what the
+      referee actually sees. Until then, the <a href="/rounds.html">log</a> has the finished ones, with
+      scrubbable replays.</p>
+      <p class="dek">The next round comes off the top of the <a href="/vote.html">ballot</a>.</p>
+    </header>
+  </section>
+
+  <!-- feed stopped deliberately -->
+  <section id="killed" hidden>
+    <header class="pagehead" style="border:0">
+      <span class="eyebrow">§ Live</span>
+      <h1>The feed was stopped</h1>
+      <p class="dek" id="killnote"></p>
+      <p class="dek">The round itself is unaffected, and it will be written up in the
+      <a href="/rounds.html">log</a> either way. Stopping the feed is not the same as stopping the
+      experiment, and a stopped feed is the system working, not failing.</p>
+    </header>
+  </section>
+
+  <!-- the round -->
+  <section id="round" hidden style="padding-top:clamp(28px,5vw,48px)">
+    <div class="livebar">
+      <span class="livedot" id="dot" aria-hidden="true"></span>
+      <div>
+        <span class="lbl">Status</span>
+        <b id="statusword" style="font-size:.95rem">Live</b>
+      </div>
+      <div>
+        <span class="lbl">Remaining</span>
+        <span class="clock" id="clock">—</span>
+      </div>
+      <div style="min-width:0">
+        <span class="lbl">Round</span>
+        <span id="title" style="font-size:.95rem"></span>
+      </div>
+      <p class="delay" id="delaynote"></p>
+    </div>
+
+    <div class="livegrid">
+      <div>
+        <div class="panes" id="panes"></div>
+        <p class="footnote" id="streamnote" style="margin-top:12px">Every line here has been through the
+        redactor and proven clean before it left the host. Flags, calling cards, keys and the operator's
+        paths never reach this page. If a line could not be proven clean, it was dropped rather than
+        shown, and the count of dropped lines is published with the round.</p>
+      </div>
+
+      <div class="split">
+        <div class="panel panel--claimed">
+          <h3>Claimed</h3>
+          <div class="body" id="claimed" tabindex="0" role="log" aria-label="What the agents say in the shared channel">
+            <p class="none">Nothing said yet.</p>
+          </div>
+        </div>
+        <div class="panel panel--observed">
+          <h3>Observed</h3>
+          <div class="body" id="observed" tabindex="0" role="log" aria-label="What the host-side referee observes">
+            <p class="none">No captures or marks observed.</p>
+          </div>
+        </div>
+        <p class="footnote" style="margin:0">Left is what they <em>say</em> in the shared channel. Right is
+        what the referee <em>finds</em> on disk. The gap between those two columns is the thing this
+        project exists to measure, and it is usually widest when someone is winning.</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- round finished -->
+  <section id="ended" hidden>
+    <header class="pagehead" style="border:0">
+      <span class="eyebrow">§ Live</span>
+      <h1>That round has finished</h1>
+      <p class="dek">The feed is closed. The write-up and a scrubbable replay go into the
+      <a href="/rounds.html">log</a> once the transcripts have been pulled and checked, which takes a
+      little while — the replay is built from the host-side record, not from this page.</p>
+    </header>
+  </section>
+
+  <p class="footnote" id="fetcherr" role="status" aria-live="polite" style="margin-top:18px"></p>
+</div></main>
+
+<footer class="foot"><div class="wrap">
+  <p>An observation log of autonomous-agent behaviour in a sealed arena. Every finding is drawn from host-side ground truth, not the contestants' own accounts.</p>
+  <div class="cols">
+    <div><b>Source of record</b><br>referee · firewall logs · shared-channel backing store · session transcripts</div>
+    <div><b>Not the source</b><br>the contestants' own histories, which this project exists to distrust</div>
+    <div><b>Status</b><br>ongoing · 2026</div>
+  </div>
+</div></footer>
+
+<script type="module">
+/* Poll, don't push. A round produces ~500 events an hour and the host watcher
+   itself only samples every 8s, so a 3s poll is already faster than the arena
+   generates data. A socket would be machinery in service of nothing.
+
+   Everything rendered here arrived pre-redacted and proven clean by the host;
+   this page still writes every value with textContent, because "already safe"
+   is not a reason to build a second injection path. */
+
+const $ = (s) => document.querySelector(s);
+const BOXES = ['ctf-1', 'ctf-2', 'ctf-3'];
+const POLL_MS = 3000;
+
+let cursor = 0;
+let seenStatus = null;
+let endsAt = null;
+let serverSkew = 0;          // server clock minus ours, so the countdown is honest
+let failures = 0;
+
+// build the three panes once
+const panes = $('#panes');
+for (const box of BOXES) {
+  const p = document.createElement('div');
+  p.className = 'pane';
+  p.innerHTML = `<h3>${box}<span class="st" id="st-${box}"></span></h3>`;
+  const s = document.createElement('div');
+  s.className = 'stream';
+  s.id = `stream-${box}`;
+  s.tabIndex = 0;
+  s.setAttribute('role', 'log');
+  s.setAttribute('aria-label', `${box} terminal, live`);
+  const quiet = document.createElement('p');
+  quiet.className = 'quiet';
+  quiet.textContent = 'waiting for the first move…';
+  s.appendChild(quiet);
+  p.appendChild(s);
+  panes.appendChild(p);
+}
+
+const show = (id) => {
+  for (const s of ['idle', 'round', 'ended', 'killed']) $(`#${s}`).hidden = s !== id;
+};
+
+/** Only auto-scroll when the reader is already at the bottom — never yank them back. */
+function appendScrolling(container, node) {
+  const atBottom = container.scrollHeight - container.scrollTop - container.clientHeight < 60;
+  container.appendChild(node);
+  if (atBottom) container.scrollTop = container.scrollHeight;
+}
+
+function streamEvent(e) {
+  const stream = $(`#stream-${e.box}`);
+  if (!stream) return;
+  stream.querySelector('.quiet')?.remove();
+  const p = document.createElement('p');
+  p.className = `ev ev--${e.role || 'out'}`;
+  if (e.label) {
+    const who = document.createElement('span');
+    who.className = 'who';
+    who.textContent = `${e.label} `;
+    p.appendChild(who);
+  }
+  p.appendChild(document.createTextNode(e.text || ''));
+  appendScrolling(stream, p);
+}
+
+function panelItem(container, meta, text, cls) {
+  container.querySelector('.none')?.remove();
+  const wrap = document.createElement('p');
+  wrap.className = 'item';
+  const m = document.createElement('span');
+  m.className = 'meta';
+  m.textContent = meta;
+  const b = document.createElement('span');
+  b.className = `body-text${cls ? ` ${cls}` : ''}`;
+  b.textContent = text;
+  wrap.append(m, b);
+  appendScrolling(container, wrap);
+}
+
+const timeOf = (ms) => new Date(ms).toISOString().slice(11, 19) + 'Z';
+
+function render(events) {
+  for (const e of events) {
+    if (e.kind === 'stream') streamEvent(e);
+    else if (e.kind === 'channel') panelItem($('#claimed'), `${e.box || 'unknown'} · ${timeOf(e.t)}`, e.text || '');
+    else if (e.kind === 'truth') {
+      const cls = e.event === 'deface' ? 'truth--deface' : e.event === 'capture' ? 'truth--capture' : '';
+      panelItem($('#observed'), `${timeOf(e.t)} · ${e.event || 'event'}`, e.text || '', cls);
+    } else if (e.kind === 'status' && e.box) {
+      const st = $(`#st-${e.box}`);
+      if (st) st.textContent = e.text || '';
+    } else if (e.kind === 'note') {
+      panelItem($('#observed'), `${timeOf(e.t)} · note`, e.text || '');
+    }
+  }
+}
+
+function tickClock() {
+  if (endsAt === null) { $('#clock').textContent = 'open-ended'; return; }
+  const left = endsAt - (Date.now() + serverSkew);
+  if (left <= 0) { $('#clock').textContent = '00:00'; return; }
+  const m = Math.floor(left / 60000);
+  const s = Math.floor((left % 60000) / 1000);
+  $('#clock').textContent = `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+setInterval(tickClock, 1000);
+
+async function poll() {
+  try {
+    const res = await fetch(`/api/live?since=${cursor}`, { headers: { accept: 'application/json' } });
+    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+    const d = await res.json();
+    failures = 0;
+    $('#fetcherr').textContent = '';
+
+    if (d.server_now) serverSkew = d.server_now - Date.now();
+
+    if (d.status !== seenStatus) {
+      seenStatus = d.status;
+      if (d.status === 'idle') show('idle');
+      else if (d.status === 'killed') {
+        $('#killnote').textContent = d.note || 'The live feed was stopped by the operator.';
+        show('killed');
+      } else if (d.status === 'ended') show('ended');
+      else show('round');
+    }
+
+    if (d.status === 'live' || d.status === 'ended') {
+      if (d.title) $('#title').textContent = d.title;
+      endsAt = Number.isFinite(d.ends_at) ? d.ends_at : null;
+      const delaySec = Math.round((d.delay_ms ?? 90000) / 1000);
+      $('#delaynote').textContent = `Shown on a ${delaySec}-second delay, so everything can be `
+        + `redacted and checked before it reaches you. You are watching the recent past, not the present.`;
+      if (d.status === 'ended') {
+        $('#statusword').textContent = 'Finished';
+        $('#dot').style.animation = 'none';
+        $('#dot').style.background = 'var(--slate)';
+      }
+      if (d.events?.length) { render(d.events); cursor = d.cursor; }
+      tickClock();
+      // A full page means we are behind; come back immediately rather than
+      // trickling out a backlog three seconds at a time.
+      if (d.more) return void setTimeout(poll, 50);
+    }
+  } catch (e) {
+    failures += 1;
+    console.error('live: poll failed —', e.message);
+    if (failures >= 3) {
+      $('#fetcherr').textContent = 'Lost contact with the feed. Still retrying — the round carries on regardless.';
+    }
+  }
+  setTimeout(poll, POLL_MS);
+}
+
+show('idle');
+poll();
+</script>
+
+<script>
+const root=document.documentElement, themeBtn=document.getElementById('theme');
+const currentTheme=()=>root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
+const syncTheme=()=>themeBtn.setAttribute('aria-pressed',String(currentTheme()==='dark'));
+syncTheme();
+themeBtn.addEventListener('click',()=>{
+  const next=currentTheme()==='dark'?'light':'dark';
+  root.setAttribute('data-theme',next);
+  syncTheme();
+  try{localStorage.setItem('arena-theme',next)}
+  catch(e){console.warn('theme: preference not persisted —',e.message)}
+});
+</script>
+</body>
+</html>

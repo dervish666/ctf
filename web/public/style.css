@@ -343,4 +343,57 @@ select:hover{border-color:var(--accent)}
 .empty{border:1px dashed var(--border-strong); border-radius:7px; padding:clamp(24px,5vw,40px);
   text-align:center; color:var(--text-dim)}
 
+/* ── the live round ────────────────────────────────────────────────────────
+   Instrument register, like the replays: density beats expression here. The
+   same trade-off is on record — the 12px mono streams do not fully meet AA, and
+   that is a decision, not an oversight. Keyboard operation and focus are not
+   part of the trade. */
+
+.livebar{display:flex; align-items:center; gap:clamp(12px,2vw,26px); flex-wrap:wrap;
+  border:1px solid var(--border-strong); border-radius:7px; background:var(--bg-raised);
+  padding:13px 18px; box-shadow:var(--shadow); margin-bottom:18px}
+.livedot{width:9px; height:9px; border-radius:50%; background:var(--warn); flex:none;
+  animation:ping 2.6s ease-out infinite}
+.livebar .clock{font-family:ui-monospace,Menlo,monospace; font-size:1.5rem; font-weight:500;
+  font-variant-numeric:tabular-nums; letter-spacing:-.01em; line-height:1}
+.livebar .lbl{font-family:ui-monospace,Menlo,monospace; font-size:.64rem; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--text-dim); display:block; margin-bottom:3px}
+.livebar .delay{margin-left:auto; text-align:right; font-size:.76rem; color:var(--text-dim); max-width:34ch}
+
+.livegrid{display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:16px; align-items:start}
+@media(max-width:1000px){.livegrid{grid-template-columns:1fr}}
+
+.panes{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px}
+@media(max-width:860px){.panes{grid-template-columns:1fr}}
+.pane{background:var(--bg-inset); border:1px solid var(--border); border-radius:7px;
+  display:flex; flex-direction:column; min-height:0; overflow:hidden}
+.pane h3{margin:0; padding:9px 12px; border-bottom:1px solid var(--border);
+  font-family:ui-monospace,Menlo,monospace; font-size:.7rem; letter-spacing:.11em;
+  text-transform:uppercase; color:var(--text-dim); display:flex; align-items:center; gap:8px}
+.pane h3 .st{margin-left:auto; font-size:.6rem; letter-spacing:.08em}
+.stream{height:min(52vh,520px); overflow:auto; padding:9px 11px; font-family:ui-monospace,Menlo,monospace;
+  font-size:12px; line-height:1.5; color:var(--text); overscroll-behavior:contain; scroll-behavior:auto}
+.stream .ev{margin:0 0 7px; white-space:pre-wrap; overflow-wrap:anywhere}
+.stream .ev .who{color:var(--text-faint); font-size:.9em}
+.stream .ev--tool{color:var(--slate)}
+.stream .ev--think{color:var(--anomaly); font-style:italic}
+.stream .ev--out{color:var(--text-dim)}
+.stream .quiet{color:var(--text-faint); font-style:italic}
+
+.split{display:grid; gap:12px}
+.panel{border:1px solid var(--border-strong); border-radius:7px; background:var(--bg-raised); overflow:hidden}
+.panel > h3{margin:0; padding:10px 14px; border-bottom:1px solid var(--border); font-size:.72rem;
+  font-family:ui-monospace,Menlo,monospace; letter-spacing:.13em; text-transform:uppercase}
+.panel--claimed > h3{color:var(--warn)}
+.panel--observed > h3{color:var(--good)}
+.panel .body{max-height:min(34vh,340px); overflow:auto; padding:11px 14px; overscroll-behavior:contain}
+.panel .item{margin:0 0 11px; font-size:.84rem; line-height:1.5}
+.panel .item:last-child{margin-bottom:0}
+.panel .item .meta{display:block; font-family:ui-monospace,Menlo,monospace; font-size:.62rem;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); margin-bottom:2px}
+.panel .item .body-text{white-space:pre-wrap; overflow-wrap:anywhere}
+.panel .none{color:var(--text-faint); font-style:italic; font-size:.84rem; margin:0}
+.truth--capture{color:var(--warn); font-weight:600}
+.truth--deface{color:var(--anomaly); font-weight:600}
+
 @media(prefers-reduced-motion:reduce){*{animation-duration:.001ms!important;transition-duration:.001ms!important}html{scroll-behavior:auto}}

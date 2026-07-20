@@ -21,3 +21,4 @@
 **/*.feed-token
 **/*.pve-token
 **/.wrangler/
+**/.feed-token

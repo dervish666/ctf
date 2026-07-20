@@ -487,6 +487,183 @@ async function handleAdminReview(request, env) {
   return json({ id, status });
 }
 
+// ── live round feed ───────────────────────────────────────────────────────
+//
+// The host pushes batches that have ALREADY passed live_redact.py's
+// redact-then-prove gate. This Worker does not redact — it could not do so
+// safely anyway, because it has no access to the secrets it would need to
+// detect. It authenticates the producer and refuses everything else.
+
+const LIVE_PAGE = 400;       // events per poll
+const LIVE_MAX_BATCH = 500;  // events per push
+
+function isFeedProducer(request, env) {
+  if (!env.FEED_TOKEN) return false;
+  const header = request.headers.get('authorization') || '';
+  const prefix = 'Bearer ';
+  if (!header.startsWith(prefix)) return false;
+  return timingSafeEqual(header.slice(prefix.length), env.FEED_TOKEN);
+}
+
+async function liveState(env) {
+  return env.DB.prepare('SELECT * FROM live_state WHERE id = 1').first();
+}
+
+/** The public view. Serves nothing at all unless a round is actually live. */
+async function handleLiveGet(request, env) {
+  const url = new URL(request.url);
+  const since = Math.max(0, Number(url.searchParams.get('since')) || 0);
+  const state = await liveState(env);
+
+  if (!state || state.status === 'idle') {
+    return json({ status: 'idle', events: [], cursor: 0 });
+  }
+  // A killed feed serves its note and nothing else, forever. The events are
+  // already gone from the table by this point; this is just belt and braces.
+  if (state.status === 'killed') {
+    return json({ status: 'killed', note: state.note, events: [], cursor: 0 });
+  }
+
+  const { results } = await env.DB.prepare(
+    'SELECT seq, t, kind, box, payload FROM live_events WHERE round_id = ? AND seq > ? '
+    + 'ORDER BY seq ASC LIMIT ?',
+  ).bind(state.round_id, since, LIVE_PAGE).all();
+
+  return json({
+    status: state.status,
+    round_id: state.round_id,
+    title: state.title,
+    started_at: state.started_at,
+    ends_at: state.ends_at,
+    delay_ms: state.delay_ms,
+    note: state.note,
+    server_now: Date.now(),
+    events: results.map((r) => ({ seq: r.seq, t: r.t, kind: r.kind, box: r.box, ...JSON.parse(r.payload) })),
+    cursor: results.length ? results[results.length - 1].seq : since,
+    more: results.length === LIVE_PAGE,
+  });
+}
+
+async function handleLivePush(request, env) {
+  const body = await readJson(request);
+  const state = await liveState(env);
+  if (!state || state.status !== 'live') {
+    // Refuse rather than buffer. If the feed was killed mid-round, a producer
+    // that has not noticed yet must not be able to write anything more.
+    return bad(`feed is not live (status: ${state ? state.status : 'unknown'})`, 409);
+  }
+  const events = Array.isArray(body.events) ? body.events : null;
+  if (!events) return bad('events must be an array');
+  if (events.length > LIVE_MAX_BATCH) return bad(`batch larger than ${LIVE_MAX_BATCH} events`);
+  if (body.round_id !== state.round_id) return bad('round_id does not match the live round', 409);
+
+  const now = Date.now();
+  const stmt = env.DB.prepare(
+    'INSERT INTO live_events (round_id, t, kind, box, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+  );
+  const batch = [];
+  for (const e of events) {
+    if (!e || typeof e !== 'object') return bad('each event must be an object');
+    if (!['stream', 'truth', 'channel', 'status', 'note'].includes(e.kind)) {
+      return bad(`unknown event kind ${JSON.stringify(e.kind)}`);
+    }
+    const { t, kind, box, ...payload } = e;
+    batch.push(stmt.bind(
+      state.round_id,
+      Number.isFinite(Number(t)) ? Number(t) : now,
+      kind,
+      typeof box === 'string' ? box : null,
+      JSON.stringify(payload),
+      now,
+    ));
+  }
+  if (batch.length) await env.DB.batch(batch);
+
+  const row = await env.DB.prepare(
+    'SELECT COUNT(*) AS n, MAX(seq) AS cursor FROM live_events WHERE round_id = ?',
+  ).bind(state.round_id).first();
+  return json({ accepted: batch.length, total: row.n, cursor: row.cursor });
+}
+
+/**
+ * start / end / kill / reset.
+ *
+ * `kill` is the one that matters: it DELETES the round's events rather than
+ * hiding them. A kill switch that only flips a visibility flag is not a kill
+ * switch — the bytes are still one query away, and the reason you reached for
+ * it is usually that the bytes are the problem.
+ */
+async function handleLiveControl(request, env) {
+  const body = await readJson(request);
+  const action = body.action;
+  const now = Date.now();
+
+  if (action === 'start') {
+    const roundId = String(body.round_id || '').slice(0, 64);
+    if (!/^[A-Za-z0-9_-]{1,64}$/.test(roundId)) return bad('round_id must be short and alphanumeric');
+
+    // A kill is sticky. You reach for it because something is being published
+    // that should not be, so it must survive the producer restarting — a feed
+    // script under a cron or a supervisor would otherwise call start() and
+    // resurrect the exact thing that was just stopped. Clearing it takes a
+    // second, deliberate act.
+    const current = await liveState(env);
+    if (current && current.status === 'killed') {
+      return json({
+        error: 'the feed was killed and will not restart on its own — run `reset` first, '
+          + 'once you know why it was killed',
+        status: 'killed',
+        note: current.note,
+      }, 409);
+    }
+    // Starting clears any previous round's events: the feed is a live surface,
+    // not an archive. The archive is the replay, built afterwards and redacted
+    // as a whole.
+    await env.DB.prepare('DELETE FROM live_events').run();
+    await env.DB.prepare(
+      'UPDATE live_state SET round_id = ?, title = ?, status = \'live\', started_at = ?, '
+      + 'ends_at = ?, delay_ms = ?, note = NULL, updated_at = ? WHERE id = 1',
+    ).bind(
+      roundId,
+      typeof body.title === 'string' ? body.title.slice(0, 200) : null,
+      now,
+      Number.isFinite(Number(body.ends_at)) ? Number(body.ends_at) : null,
+      Number.isFinite(Number(body.delay_ms)) ? Number(body.delay_ms) : 90000,
+      now,
+    ).run();
+    return json({ status: 'live', round_id: roundId });
+  }
+
+  if (action === 'end') {
+    await env.DB.prepare("UPDATE live_state SET status = 'ended', updated_at = ? WHERE id = 1")
+      .bind(now).run();
+    return json({ status: 'ended' });
+  }
+
+  if (action === 'kill') {
+    const note = typeof body.note === 'string' && body.note.trim()
+      ? body.note.slice(0, 300)
+      : 'The live feed was stopped by the operator.';
+    await env.DB.prepare('DELETE FROM live_events').run();
+    await env.DB.prepare(
+      "UPDATE live_state SET status = 'killed', note = ?, updated_at = ? WHERE id = 1",
+    ).bind(note, now).run();
+    console.warn('live: feed KILLED —', note);
+    return json({ status: 'killed', note, events_deleted: true });
+  }
+
+  if (action === 'reset') {
+    await env.DB.prepare('DELETE FROM live_events').run();
+    await env.DB.prepare(
+      "UPDATE live_state SET status = 'idle', round_id = NULL, title = NULL, "
+      + 'started_at = NULL, ends_at = NULL, note = NULL, updated_at = ? WHERE id = 1',
+    ).bind(now).run();
+    return json({ status: 'idle' });
+  }
+
+  return bad("action must be one of start, end, kill, reset");
+}
+
 // ── router ────────────────────────────────────────────────────────────────
 
 export default {
@@ -520,6 +697,7 @@ export default {
     try {
       const path = url.pathname;
 
+      if (method === 'GET' && path === '/api/live') return withCookie(await handleLiveGet(request, env));
       if (method === 'GET' && path === '/api/menu') return withCookie(handleMenu(env));
       if (method === 'GET' && path === '/api/ballot') return withCookie(await handleBallot(request, env, voterId));
 
@@ -535,6 +713,18 @@ export default {
         if (path === '/api/admin/review') {
           if (!isAdmin(request, env)) return bad('not authorised', 401);
           return withCookie(await handleAdminReview(request, env));
+        }
+
+        // The producer pushes with FEED_TOKEN; control also accepts the admin
+        // token, so the kill switch is reachable from the review page and from
+        // a phone, not only from the machine running the feed.
+        if (path === '/api/live/push') {
+          if (!isFeedProducer(request, env)) return bad('not authorised', 401);
+          return withCookie(await handleLivePush(request, env));
+        }
+        if (path === '/api/live/control') {
+          if (!isFeedProducer(request, env) && !isAdmin(request, env)) return bad('not authorised', 401);
+          return withCookie(await handleLiveControl(request, env));
         }
       }
 
