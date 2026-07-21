@@ -147,12 +147,15 @@ switch DELETEs the events. See the audit for the full design.
   Rate limiting; the free plan includes one rule) before ship, so an attacker
   rotating `since` to bust the cache cannot exhaust the Worker request quota and
   take the ballot down with it.
-- **Arena ↔ feed isolation (LF4).** The arena reaches the internet via NAT, so a
-  contestant VM *can* poll `/api/live` and read its rivals' (90s-delayed) terminals,
-  contaminating the experiment. This is unresolved: either restrict arena egress to
-  `api.anthropic.com` only (a firewall change on guineapig — see `arena-firewall.md`;
-  this would also close audit C2), or gate `/api/live` behind viewer auth during a
-  live round. **Decide before the feed runs against a real round.**
+- **Arena ↔ feed isolation (LF4) — addressed by a viewer gate.** The arena reaches
+  the internet via NAT, so a contestant VM could otherwise poll `/api/live` and read
+  its rivals' (90s-delayed) terminals. A **live** round now requires a viewer pass: a
+  signed, expiring cookie handed out only after a Turnstile solve (`/api/live/pass`),
+  which a headless contestant `curl` cannot get. idle/ended stay open. Verified
+  end-to-end: no pass → `403 needs_pass`, pass → `200`. A stronger long-term option
+  (not required to ship) is to restrict arena egress to `api.anthropic.com` only (a
+  firewall change on guineapig — see `arena-firewall.md`), which would also close
+  audit C2 at the network layer.
 
 ## Publishing discipline
 

@@ -102,6 +102,20 @@
     </div>
   </section>
 
+  <!-- a live round requires a human check to watch, so the arena's own VMs (which
+       reach the internet by NAT) cannot poll this page and watch each other -->
+  <section id="gate" hidden>
+    <header class="pagehead" style="border:0">
+      <span class="eyebrow">§ Live</span>
+      <h1>A round is live</h1>
+      <p class="dek">This feed shows the contestants' terminals as the round runs. To keep the machines
+      <em>inside</em> the arena from watching one another through this page, a quick human check is required
+      before it plays. It lasts the round — you will not be asked again.</p>
+      <div id="cf-widget" style="margin-top:22px"></div>
+      <p class="footnote" id="gateerr" role="status" aria-live="polite" style="margin-top:12px"></p>
+    </header>
+  </section>
+
   <!-- round finished -->
   <section id="ended" hidden>
     <header class="pagehead" style="border:0">
@@ -124,6 +138,13 @@
     <div><b>Status</b><br>ongoing · 2026</div>
   </div>
 </div></footer>
+
+<script>
+/* Turnstile's own onload callback (not the script tag's load event), resolved
+   into a promise the module awaits before calling render() — mirrors vote.html. */
+window.turnstileReady = new Promise((resolve) => { window.onloadTurnstileCallback = resolve; });
+</script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js?render=explicit&onload=onloadTurnstileCallback" async defer></script>
 
 <script type="module">
 /* Poll, don't push. A round produces ~500 events an hour and the host watcher
@@ -182,8 +203,45 @@ for (const box of BOXES) {
 }
 
 const show = (id) => {
-  for (const s of ['idle', 'round', 'ended', 'killed']) $(`#${s}`).hidden = s !== id;
+  for (const s of ['idle', 'round', 'ended', 'killed', 'gate']) $(`#${s}`).hidden = s !== id;
 };
+
+// The live-round viewer gate (LF4): a live feed answers 403 { needs_pass } until a
+// Turnstile solve mints a pass cookie. Mount the widget once; its callback posts the
+// token for the cookie, then polling resumes and the next fetch is authorised.
+let gateMounted = false, gateWidget = null;
+async function mountGate(siteKey) {
+  if (gateMounted) return;
+  gateMounted = true;
+  if (!siteKey) { $('#gateerr').textContent = 'The live feed is not accepting viewers right now.'; return; }
+  try {
+    await Promise.race([window.turnstileReady,
+      new Promise((_, r) => setTimeout(() => r(new Error('timeout')), 8000))]);
+    if (typeof window.turnstile?.render !== 'function') throw new Error('no render()');
+    gateWidget = window.turnstile.render('#cf-widget', {
+      sitekey: siteKey, theme: 'auto', action: 'live-pass',
+      callback: (token) => requestPass(token),
+    });
+  } catch (e) {
+    console.error('live: turnstile unavailable —', e.message);
+    $('#gateerr').textContent = 'The human check could not load — an extension or filter may be blocking it.';
+  }
+}
+async function requestPass(token) {
+  try {
+    const r = await fetch('/api/live/pass', {
+      method: 'POST', headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ turnstile_token: token }),
+    });
+    if (!r.ok) throw new Error(`HTTP ${r.status}`);
+    $('#gateerr').textContent = '';
+    schedule(150);   // pass cookie is set; the next poll is authorised
+  } catch (e) {
+    console.error('live: pass request failed —', e.message);
+    $('#gateerr').textContent = 'That check did not go through — try again.';
+    if (gateWidget !== null) window.turnstile.reset(gateWidget);
+  }
+}
 
 /** Only auto-scroll when the reader is already at the bottom — never yank them back. */
 function appendScrolling(container, node) {
@@ -253,6 +311,17 @@ setInterval(tickClock, 1000);
 async function poll() {
   try {
     const res = await fetch(`/api/live?since=${cursor}`, { headers: { accept: 'application/json' } });
+    // A live round answers 403 { needs_pass } until the viewer solves the human
+    // check. That is the gate (LF4), not an error — show the challenge and wait.
+    if (res.status === 403) {
+      const g = await res.json().catch(() => ({}));
+      if (g.needs_pass) {
+        failures = 0; $('#fetcherr').textContent = '';
+        if (seenStatus !== 'gate') { seenStatus = 'gate'; show('gate'); }
+        mountGate(g.turnstile_site_key);
+        return void schedule(10000);   // re-check slowly in case the round ends while we wait
+      }
+    }
     if (!res.ok) throw new Error(`HTTP ${res.status}`);
     const d = await res.json();
     failures = 0;

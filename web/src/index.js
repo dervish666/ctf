@@ -503,6 +503,8 @@ const LIVE_PAGE = 400;       // events per poll
 const LIVE_MAX_BATCH = 500;  // events per push
 const LIVE_MAX_BODY = 1024 * 1024;  // 1 MiB — a full 200-event batch is ~200KB; well clear of it
 const LIVE_CACHE_TTL = 2;    // seconds; collapse duplicate polls at the edge (see handleLiveGet)
+const LIVE_PASS_COOKIE = 'arena_live_pass';
+const LIVE_PASS_TTL = 6 * 60 * 60;  // seconds — one long round
 
 function isFeedProducer(request, env) {
   if (!env.FEED_TOKEN) return false;
@@ -512,6 +514,40 @@ function isFeedProducer(request, env) {
   return timingSafeEqual(header.slice(prefix.length), env.FEED_TOKEN);
 }
 
+/**
+ * A live-feed viewer pass (audit LF4). During a LIVE round the feed streams the
+ * contestants' terminals, and the arena reaches the internet by NAT — so a
+ * contestant VM could otherwise poll /api/live and read its rivals mid-round. The
+ * pass is a signed, expiring cookie handed out only after a Turnstile solve, so a
+ * headless `curl` cannot get one. It gates 'live' only; idle/ended stay open.
+ */
+async function isLiveViewer(request, env) {
+  const raw = readCookie(request, LIVE_PASS_COOKIE);
+  if (!raw) return false;
+  const dot = raw.lastIndexOf('.');
+  if (dot < 1) return false;
+  const exp = raw.slice(0, dot);
+  const sig = raw.slice(dot + 1);
+  if (!/^[0-9]{1,15}$/.test(exp)) return false;
+  if (Number(exp) < Math.floor(Date.now() / 1000)) return false;      // expired
+  const expected = await hmacHex(env.BALLOT_SECRET, `livepass:${exp}`);
+  return timingSafeEqual(sig, expected);
+}
+
+async function mintLivePass(env) {
+  const exp = Math.floor(Date.now() / 1000) + LIVE_PASS_TTL;
+  const sig = await hmacHex(env.BALLOT_SECRET, `livepass:${exp}`);
+  return `${LIVE_PASS_COOKIE}=${exp}.${sig}; Path=/; Max-Age=${LIVE_PASS_TTL}; HttpOnly; Secure; SameSite=Lax`;
+}
+
+/** Solve Turnstile once → get a viewer pass cookie for the rest of the round. */
+async function handleLivePass(request, env) {
+  const payload = await readJson(request);
+  const turnstile = await verifyTurnstile(env, payload.turnstile_token, request);
+  if (!turnstile.ok) return bad(turnstile.reason, turnstile.status);
+  return json({ ok: true }, 200, { 'set-cookie': await mintLivePass(env) });
+}
+
 async function liveState(env) {
   return env.DB.prepare('SELECT * FROM live_state WHERE id = 1').first();
 }
@@ -519,53 +555,50 @@ async function liveState(env) {
 /**
  * The public view. Serves nothing at all unless a round is actually live.
  *
- * This is the ONLY unauthenticated, high-frequency read on the Worker, and it
- * shares the Worker + D1 with the live ballot. Left unbounded, one client looping
- * `?since=0` reads a 400-row page per request and can burn the free-tier D1
- * quota — taking the deployed ballot down with it. So each (round, since) page is
- * cached at the edge for a couple of seconds: duplicate polls (many viewers on the
- * same cursor, or a tight attack loop on one `since`) collapse to a single D1 read
- * per TTL window. The cache check runs BEFORE any D1 query, so a hit costs nothing.
- * A short TTL against a feed that is already on a 90s delay is invisible to readers.
- * (Belt-and-braces beyond this: a Cloudflare rate-limiting rule on /api/live* — see
- *  the deploy runbook — bounds an attacker who rotates `since` to bust the cache.)
+ * Gating (LF4): during a LIVE round this streams the contestants' terminals, and
+ * the arena reaches the internet by NAT — so a contestant VM could poll this and
+ * read its rivals mid-round. A live round therefore requires a viewer PASS: a
+ * signed, expiring cookie handed out only after a Turnstile solve (see
+ * handleLivePass), which a headless client cannot get. idle/ended stay open.
+ *
+ * Cost (LF1): the authorised events page is cached briefly (keyed by round+cursor)
+ * so many viewers on a cursor — or a pass-holder's tight loop — collapse to one D1
+ * read per TTL window, instead of burning the free-tier quota the ballot shares.
+ * The gate runs BEFORE the cache read, so cached content only reaches pass-holders.
+ * (Belt-and-braces still worth adding: a Cloudflare rate-limiting rule on
+ *  /api/live* — see the deploy runbook.)
  */
 async function handleLiveGet(request, env, ctx) {
   const url = new URL(request.url);
-  const cache = caches.default;
-  const cacheKey = new Request(url.toString(), { method: 'GET' });
-  const cached = await cache.match(cacheKey);
-  if (cached) return cached;
-
-  const since = Math.max(0, Number(url.searchParams.get('since')) || 0);
   const state = await liveState(env);
 
-  const finish = (payload) => {
-    const resp = new Response(JSON.stringify(payload), {
-      headers: {
-        'content-type': 'application/json; charset=utf-8',
-        'cache-control': `public, max-age=${LIVE_CACHE_TTL}`,
-      },
-    });
-    if (ctx) ctx.waitUntil(cache.put(cacheKey, resp.clone()));
-    return resp;
-  };
+  // Not sensitive and cheap (one state row) — served directly, no pass.
+  if (!state || state.status === 'idle') return json({ status: 'idle', events: [], cursor: 0 });
+  if (state.status === 'killed') return json({ status: 'killed', note: state.note, events: [], cursor: 0 });
 
-  if (!state || state.status === 'idle') {
-    return finish({ status: 'idle', events: [], cursor: 0 });
+  // A live round is gated; an ended one is open (the round is over).
+  if (state.status === 'live' && !(await isLiveViewer(request, env))) {
+    return json({
+      status: 'live', needs_pass: true, title: state.title,
+      turnstile_site_key: env.TURNSTILE_SITE_KEY || null,
+      events: [], cursor: 0,
+    }, 403);
   }
-  // A killed feed serves its note and nothing else, forever. The events are
-  // already gone from the table by this point; this is just belt and braces.
-  if (state.status === 'killed') {
-    return finish({ status: 'killed', note: state.note, events: [], cursor: 0 });
-  }
+
+  // Authorised. Cache the expensive events page under a synthetic round+cursor key
+  // (never the raw URL — an idle response must not collide with a live one).
+  const since = Math.max(0, Number(url.searchParams.get('since')) || 0);
+  const cache = caches.default;
+  const cacheKey = new Request(`https://live-cache/${encodeURIComponent(state.round_id)}/${since}`);
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
 
   const { results } = await env.DB.prepare(
     'SELECT seq, t, kind, box, payload FROM live_events WHERE round_id = ? AND seq > ? '
     + 'ORDER BY seq ASC LIMIT ?',
   ).bind(state.round_id, since, LIVE_PAGE).all();
 
-  return finish({
+  const resp = new Response(JSON.stringify({
     status: state.status,
     round_id: state.round_id,
     title: state.title,
@@ -577,7 +610,14 @@ async function handleLiveGet(request, env, ctx) {
     events: results.map((r) => ({ seq: r.seq, t: r.t, kind: r.kind, box: r.box, ...JSON.parse(r.payload) })),
     cursor: results.length ? results[results.length - 1].seq : since,
     more: results.length === LIVE_PAGE,
+  }), {
+    headers: {
+      'content-type': 'application/json; charset=utf-8',
+      'cache-control': `public, max-age=${LIVE_CACHE_TTL}`,
+    },
   });
+  if (ctx) ctx.waitUntil(cache.put(cacheKey, resp.clone()));
+  return resp;
 }
 
 async function handleLivePush(request, env) {
@@ -768,6 +808,9 @@ export default {
           if (!isFeedProducer(request, env) && !isAdmin(request, env)) return bad('not authorised', 401);
           return withCookie(await handleLiveControl(request, env));
         }
+        // Public, but Turnstile-gated: solving it mints the viewer pass that a live
+        // round's reads require (LF4). Same-origin (checked above) + Turnstile.
+        if (path === '/api/live/pass') return handleLivePass(request, env);
       }
 
       if (method === 'GET' && path === '/api/admin/queue') {
