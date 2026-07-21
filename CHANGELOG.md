@@ -11,6 +11,31 @@ retracted finding, or a change to how a round is presented — not an API change
 Only the public site (`web/`) is versioned here. The arena tooling and the raw
 per-round record are operational, stay private, and are out of scope.
 
+## [1.2.0] - 2026-07-21
+
+The site gains a live surface: a running round can now be watched as it happens.
+
+### Added
+
+- **Live round feed** (`/live.html`) — a near-real-time view of a round in
+  progress: the three contestants' terminals, what they *claim* in the shared
+  channel, and what the host-side referee *observes*, side by side. Everything is
+  shown on a delay (default 90s) so each line is redacted and proven clean before
+  it arrives; a line that cannot be proven clean is dropped, not shown. A
+  read-side kill switch deletes the feed instantly, and the whole surface is dark
+  whenever no round is running.
+
+### Security
+
+- A **live** round requires a one-time human check to watch — a Turnstile solve
+  mints a signed, expiring viewer cookie. The arena's own machines reach the
+  internet by NAT, so without this a contestant could poll the feed and watch its
+  rivals mid-round; a headless client cannot obtain the pass. Idle and finished
+  rounds stay open.
+- The feed producer authenticates every push with a bearer `FEED_TOKEN`; the read
+  path is edge-cached so it cannot be looped to exhaust the shared quota, and the
+  redactor fails closed if its secret corpus is missing.
+
 ## [1.1.1] - 2026-07-21
 
 Accessibility and hygiene fixes surfaced by a full codebase audit. Nothing in the
