@@ -122,6 +122,38 @@ every public response until that point, and the pages render all submitter text
 with `textContent`, never `innerHTML` — two independent guards, so neither is
 load-bearing alone.
 
+## The live round feed (branch `live-feed` — not yet shipped)
+
+A near-real-time feed of a running round: `site/live_feed.py` tails the arena via
+the guest agent, redacts each event through `live_redact.py`'s prove-or-drop gate,
+holds it in a server-side delay line (default 90s), then POSTs batches to
+`/api/live/push`; `/live.html` polls `/api/live?since=<cursor>`. A read-side kill
+switch DELETEs the events. See the audit for the full design.
+
+### Deploy prerequisites (both are easy to forget → silent failure)
+
+1. **The `FEED_TOKEN` secret** — `npx wrangler secret put FEED_TOKEN` (a long random
+   string; the producer reads the same value from `web/.feed-token`). Without it,
+   `/api/live/push` and `/api/live/control` fail closed with 401.
+2. **The live schema** — `npx wrangler d1 execute ctf-arena-ballot --remote --file=./schema-live.sql`
+   (adds `live_events` + `live_state` to the ballot DB).
+
+### Two blockers that still gate shipping (from the audit)
+
+- **Read-path rate limit (LF1).** `GET /api/live` is now edge-cached (~2s) so
+  duplicate polls collapse to one D1 read, and the client backs off when
+  idle/backgrounded — but the Worker is still *invoked* per request. Add a
+  **Cloudflare rate-limiting rule** on `/api/live*` (dashboard → Security → WAF →
+  Rate limiting; the free plan includes one rule) before ship, so an attacker
+  rotating `since` to bust the cache cannot exhaust the Worker request quota and
+  take the ballot down with it.
+- **Arena ↔ feed isolation (LF4).** The arena reaches the internet via NAT, so a
+  contestant VM *can* poll `/api/live` and read its rivals' (90s-delayed) terminals,
+  contaminating the experiment. This is unresolved: either restrict arena egress to
+  `api.anthropic.com` only (a firewall change on guineapig — see `arena-firewall.md`;
+  this would also close audit C2), or gate `/api/live` behind viewer auth during a
+  live round. **Decide before the feed runs against a real round.**
+
 ## Publishing discipline
 
 Everything in `public/` is public. Before adding content:

@@ -184,7 +184,7 @@ function isAdmin(request, env) {
  * repeatedly. A Content-Length check alone is not enough: a chunked request
  * declares no length, so the budget has to be enforced against the stream itself.
  */
-async function readBounded(request) {
+async function readBounded(request, maxBytes = MAX_BODY) {
   if (!request.body) return '';
   const reader = request.body.getReader();
   const chunks = [];
@@ -194,7 +194,7 @@ async function readBounded(request) {
       const { done, value } = await reader.read();
       if (done) break;
       total += value.byteLength;
-      if (total > MAX_BODY) {
+      if (total > maxBytes) {
         await reader.cancel('body too large');
         throw new SpecError('request body too large');
       }
@@ -209,15 +209,20 @@ async function readBounded(request) {
   return new TextDecoder().decode(joined);
 }
 
-async function readJson(request) {
+// The public write paths (propose/vote) carry prose, so 24KB is plenty and the
+// tight budget is a DoS guard. The authenticated feed push carries a batch of up
+// to 200 events (~900 chars each), which legitimately exceeds 24KB — it gets its
+// own, larger budget so a real batch is not rejected with a 422 that then crashes
+// the producer. Still bounded: an authed producer, not the anonymous public.
+async function readJson(request, maxBytes = MAX_BODY) {
   const type = request.headers.get('content-type') || '';
   if (!type.includes('application/json')) throw new SpecError('expected application/json');
 
   // Refuse on the declared length BEFORE reading anything.
   const declared = Number(request.headers.get('content-length'));
-  if (Number.isFinite(declared) && declared > MAX_BODY) throw new SpecError('request body too large');
+  if (Number.isFinite(declared) && declared > maxBytes) throw new SpecError('request body too large');
 
-  const text = await readBounded(request);
+  const text = await readBounded(request, maxBytes);
   try {
     return JSON.parse(text);
   } catch {
@@ -496,6 +501,8 @@ async function handleAdminReview(request, env) {
 
 const LIVE_PAGE = 400;       // events per poll
 const LIVE_MAX_BATCH = 500;  // events per push
+const LIVE_MAX_BODY = 1024 * 1024;  // 1 MiB — a full 200-event batch is ~200KB; well clear of it
+const LIVE_CACHE_TTL = 2;    // seconds; collapse duplicate polls at the edge (see handleLiveGet)
 
 function isFeedProducer(request, env) {
   if (!env.FEED_TOKEN) return false;
@@ -509,19 +516,48 @@ async function liveState(env) {
   return env.DB.prepare('SELECT * FROM live_state WHERE id = 1').first();
 }
 
-/** The public view. Serves nothing at all unless a round is actually live. */
-async function handleLiveGet(request, env) {
+/**
+ * The public view. Serves nothing at all unless a round is actually live.
+ *
+ * This is the ONLY unauthenticated, high-frequency read on the Worker, and it
+ * shares the Worker + D1 with the live ballot. Left unbounded, one client looping
+ * `?since=0` reads a 400-row page per request and can burn the free-tier D1
+ * quota — taking the deployed ballot down with it. So each (round, since) page is
+ * cached at the edge for a couple of seconds: duplicate polls (many viewers on the
+ * same cursor, or a tight attack loop on one `since`) collapse to a single D1 read
+ * per TTL window. The cache check runs BEFORE any D1 query, so a hit costs nothing.
+ * A short TTL against a feed that is already on a 90s delay is invisible to readers.
+ * (Belt-and-braces beyond this: a Cloudflare rate-limiting rule on /api/live* — see
+ *  the deploy runbook — bounds an attacker who rotates `since` to bust the cache.)
+ */
+async function handleLiveGet(request, env, ctx) {
   const url = new URL(request.url);
+  const cache = caches.default;
+  const cacheKey = new Request(url.toString(), { method: 'GET' });
+  const cached = await cache.match(cacheKey);
+  if (cached) return cached;
+
   const since = Math.max(0, Number(url.searchParams.get('since')) || 0);
   const state = await liveState(env);
 
+  const finish = (payload) => {
+    const resp = new Response(JSON.stringify(payload), {
+      headers: {
+        'content-type': 'application/json; charset=utf-8',
+        'cache-control': `public, max-age=${LIVE_CACHE_TTL}`,
+      },
+    });
+    if (ctx) ctx.waitUntil(cache.put(cacheKey, resp.clone()));
+    return resp;
+  };
+
   if (!state || state.status === 'idle') {
-    return json({ status: 'idle', events: [], cursor: 0 });
+    return finish({ status: 'idle', events: [], cursor: 0 });
   }
   // A killed feed serves its note and nothing else, forever. The events are
   // already gone from the table by this point; this is just belt and braces.
   if (state.status === 'killed') {
-    return json({ status: 'killed', note: state.note, events: [], cursor: 0 });
+    return finish({ status: 'killed', note: state.note, events: [], cursor: 0 });
   }
 
   const { results } = await env.DB.prepare(
@@ -529,7 +565,7 @@ async function handleLiveGet(request, env) {
     + 'ORDER BY seq ASC LIMIT ?',
   ).bind(state.round_id, since, LIVE_PAGE).all();
 
-  return json({
+  return finish({
     status: state.status,
     round_id: state.round_id,
     title: state.title,
@@ -545,7 +581,7 @@ async function handleLiveGet(request, env) {
 }
 
 async function handleLivePush(request, env) {
-  const body = await readJson(request);
+  const body = await readJson(request, LIVE_MAX_BODY);
   const state = await liveState(env);
   if (!state || state.status !== 'live') {
     // Refuse rather than buffer. If the feed was killed mid-round, a producer
@@ -644,10 +680,14 @@ async function handleLiveControl(request, env) {
     const note = typeof body.note === 'string' && body.note.trim()
       ? body.note.slice(0, 300)
       : 'The live feed was stopped by the operator.';
-    await env.DB.prepare('DELETE FROM live_events').run();
-    await env.DB.prepare(
-      "UPDATE live_state SET status = 'killed', note = ?, updated_at = ? WHERE id = 1",
-    ).bind(note, now).run();
+    // Atomic (one transaction): the kill switch must never half-apply — events
+    // deleted but status not 'killed', or the reverse. It's the one control you
+    // reach for when something must stop NOW, so it cannot leave a torn state.
+    await env.DB.batch([
+      env.DB.prepare('DELETE FROM live_events'),
+      env.DB.prepare("UPDATE live_state SET status = 'killed', note = ?, updated_at = ? WHERE id = 1")
+        .bind(note, now),
+    ]);
     console.warn('live: feed KILLED —', note);
     return json({ status: 'killed', note, events_deleted: true });
   }
@@ -697,7 +737,9 @@ export default {
     try {
       const path = url.pathname;
 
-      if (method === 'GET' && path === '/api/live') return withCookie(await handleLiveGet(request, env));
+      // No cookie wrapper: a live read needs no voter identity, and a Set-Cookie
+      // would make the response uncacheable. ctx lets it populate the edge cache.
+      if (method === 'GET' && path === '/api/live') return handleLiveGet(request, env, ctx);
       if (method === 'GET' && path === '/api/menu') return withCookie(handleMenu(env));
       if (method === 'GET' && path === '/api/ballot') return withCookie(await handleBallot(request, env, voterId));
 

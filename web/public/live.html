@@ -136,7 +136,24 @@
 
 const $ = (s) => document.querySelector(s);
 const BOXES = ['ctf-1', 'ctf-2', 'ctf-3'];
-const POLL_MS = 3000;
+// Poll cadence by state (LF2). A live round wants 3s; but a page left open on an
+// idle/ended/killed feed, or backgrounded in a forgotten tab, must NOT keep hitting
+// the shared Worker every 3s forever — a handful of abandoned tabs would drain the
+// free-tier request quota and take the ballot down with it.
+const POLL_MS = 3000;        // live round
+const IDLE_MS = 20000;       // no round running — check occasionally
+const DONE_MS = 60000;       // ended/killed — terminal, just enough to notice a reset
+const HIDDEN_MS = 120000;    // tab backgrounded — barely tick; resume on focus
+let pollTimer = null;
+function schedule(ms) { clearTimeout(pollTimer); pollTimer = setTimeout(poll, ms); }
+function nextDelay() {
+  if (document.hidden) return HIDDEN_MS;
+  if (seenStatus === 'live') return POLL_MS;
+  if (seenStatus === 'idle') return IDLE_MS;
+  return DONE_MS;            // ended / killed / not-yet-known
+}
+// Resume promptly when a backgrounded tab is brought back to the front.
+document.addEventListener('visibilitychange', () => { if (!document.hidden) schedule(200); });
 
 let cursor = 0;
 let seenStatus = null;
@@ -268,7 +285,7 @@ async function poll() {
       tickClock();
       // A full page means we are behind; come back immediately rather than
       // trickling out a backlog three seconds at a time.
-      if (d.more) return void setTimeout(poll, 50);
+      if (d.more) return void schedule(50);
     }
   } catch (e) {
     failures += 1;
@@ -276,8 +293,10 @@ async function poll() {
     if (failures >= 3) {
       $('#fetcherr').textContent = 'Lost contact with the feed. Still retrying — the round carries on regardless.';
     }
+    // Back off on repeated errors instead of hammering a struggling endpoint.
+    return void schedule(Math.min(POLL_MS * failures, 30000));
   }
-  setTimeout(poll, POLL_MS);
+  schedule(nextDelay());
 }
 
 show('idle');
