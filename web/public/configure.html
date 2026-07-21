@@ -156,7 +156,10 @@
             <div class="mtrack"><div class="mfill" id="costfill"></div></div>
           </div>
 
-          <ul class="warnlist" id="warnings"></ul>
+          <!-- aria-live: the builder's warnings (e.g. "this board cannot be won")
+               update as dials change; a screen-reader user must hear them, not just
+               see them. Polite so it waits for a pause rather than interrupting. -->
+          <ul class="warnlist" id="warnings" aria-live="polite" aria-label="Round warnings"></ul>
 
           <div class="specbox" id="spec" tabindex="0" role="group" aria-label="Round specification, JSON">—</div>
 

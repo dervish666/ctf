@@ -11,6 +11,31 @@ retracted finding, or a change to how a round is presented — not an API change
 Only the public site (`web/`) is versioned here. The arena tooling and the raw
 per-round record are operational, stay private, and are out of scope.
 
+## [1.1.1] - 2026-07-21
+
+Accessibility and hygiene fixes surfaced by a full codebase audit. Nothing in the
+record or the site's structure changes.
+
+### Fixed
+
+- **Screen readers now hear the builder's warnings** (`/configure.html`) — the
+  seed-sanity warnings (a board that cannot be won, say) live in an `aria-live`
+  region, so a non-visual reader toggling to an unwinnable configuration is told,
+  not just shown.
+- **Deep links to individual rounds** (`/rounds.html`) — each round now carries an
+  `id` (`#r13`), so a round can be linked and scrolled to directly rather than
+  hunted down a lengthening page. Additive, and it scales as the log grows.
+- **Replay keyboard control no longer double-fires** — Space and the arrows are
+  ignored when focus is on a control (the scrubber, a filter, the speed menu), so
+  operating that control no longer also drives the player underneath it.
+
+### Security
+
+- **`.gitignore` now excludes `*.feed-token`** — the allow-list re-includes
+  `/web/`, and a new operational token file that lives under it was not otherwise
+  ignored, so a stray `git add` could have committed a live token to a public
+  repo. Closed before it ever happened.
+
 ## [1.1.0] - 2026-07-20
 
 The site gains its first dynamic surface: readers can now configure a round and

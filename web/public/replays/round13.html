@@ -303,6 +303,10 @@ scrub.addEventListener("input",()=>{
   if(seekRaf===null) seekRaf = requestAnimationFrame(()=>{ seekRaf=null; seek(seekPending); });
 });
 document.addEventListener("keydown",e=>{
+  // Don't hijack keys meant for a focused control (scrubber, filter buttons, speed
+  // select) — otherwise Space/Arrows drive the control AND the player at once.
+  const _t=e.target;
+  if(_t&&(_t.tagName==="INPUT"||_t.tagName==="SELECT"||_t.tagName==="BUTTON"||_t.tagName==="TEXTAREA"))return;
   if(e.code==="Space"){ e.preventDefault(); playing?pause():play(); }
   else if(e.code==="ArrowRight"){ pause(); seek(cur+DUR*0.02); }
   else if(e.code==="ArrowLeft"){ pause(); seek(cur-DUR*0.02); }
