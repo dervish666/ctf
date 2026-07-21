@@ -11,6 +11,24 @@ retracted finding, or a change to how a round is presented — not an API change
 Only the public site (`web/`) is versioned here. The arena tooling and the raw
 per-round record are operational, stay private, and are out of scope.
 
+## [1.2.1] - 2026-07-21
+
+Refinements to the live page, from watching a real round run.
+
+### Changed
+
+- **Colour per contestant** — each of the three terminals now carries an identity
+  colour on its header, top rule, speaker labels and tool lines, so they read
+  apart at a glance instead of as three identical grey columns.
+- **Event-type filters** — toggles above the terminals (Say · Tools · Thinking ·
+  Output) hide or show each kind of line across all three panes, so you can watch
+  what a run *does* without the thinking, or vice-versa.
+- **Taller, resizeable terminals** — bigger by default and drag-to-resize from the
+  bottom edge, keeping the thin borders.
+- **"Claimed" → "Agent chat"** — the shared-channel panel is renamed, and each
+  message is coloured and rule-marked by who sent it, so a spammy channel stays
+  legible.
+
 ## [1.2.0] - 2026-07-21
 
 The site gains a live surface: a running round can now be watched as it happens.

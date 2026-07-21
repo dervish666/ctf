@@ -75,6 +75,13 @@
 
     <div class="livegrid">
       <div>
+        <div class="filters" id="filters" role="group" aria-label="Filter what the terminals show">
+          <span class="flab" aria-hidden="true">Show</span>
+          <button class="flt" type="button" data-role="say" aria-pressed="true">Say</button>
+          <button class="flt" type="button" data-role="tool" aria-pressed="true">Tools</button>
+          <button class="flt" type="button" data-role="think" aria-pressed="true">Thinking</button>
+          <button class="flt" type="button" data-role="out" aria-pressed="true">Output</button>
+        </div>
         <div class="panes" id="panes"></div>
         <p class="footnote" id="streamnote" style="margin-top:12px">Every line here has been through the
         redactor and proven clean before it left the host. Flags, calling cards, keys and the operator's
@@ -84,8 +91,8 @@
 
       <div class="split">
         <div class="panel panel--claimed">
-          <h3>Claimed</h3>
-          <div class="body" id="claimed" tabindex="0" role="log" aria-label="What the agents say in the shared channel">
+          <h3>Agent chat</h3>
+          <div class="body" id="claimed" tabindex="0" role="log" aria-label="Agent chat — what they say in the shared channel">
             <p class="none">Nothing said yet.</p>
           </div>
         </div>
@@ -202,6 +209,16 @@ for (const box of BOXES) {
   panes.appendChild(p);
 }
 
+// Event-type filters: toggling a button off adds `hide-<role>` to the panes, which
+// CSS uses to hide those lines across all three terminals. All on by default.
+document.querySelectorAll('#filters .flt').forEach((btn) => {
+  btn.addEventListener('click', () => {
+    const showing = btn.getAttribute('aria-pressed') !== 'false';
+    btn.setAttribute('aria-pressed', showing ? 'false' : 'true');
+    panes.classList.toggle(`hide-${btn.dataset.role}`, showing);
+  });
+});
+
 const show = (id) => {
   for (const s of ['idle', 'round', 'ended', 'killed', 'gate']) $(`#${s}`).hidden = s !== id;
 };
@@ -266,15 +283,15 @@ function streamEvent(e) {
   appendScrolling(stream, p);
 }
 
-function panelItem(container, meta, text, cls) {
+function panelItem(container, meta, text, bodyCls, wrapCls) {
   container.querySelector('.none')?.remove();
   const wrap = document.createElement('p');
-  wrap.className = 'item';
+  wrap.className = `item${wrapCls ? ` ${wrapCls}` : ''}`;
   const m = document.createElement('span');
   m.className = 'meta';
   m.textContent = meta;
   const b = document.createElement('span');
-  b.className = `body-text${cls ? ` ${cls}` : ''}`;
+  b.className = `body-text${bodyCls ? ` ${bodyCls}` : ''}`;
   b.textContent = text;
   wrap.append(m, b);
   appendScrolling(container, wrap);
@@ -285,7 +302,7 @@ const timeOf = (ms) => new Date(ms).toISOString().slice(11, 19) + 'Z';
 function render(events) {
   for (const e of events) {
     if (e.kind === 'stream') streamEvent(e);
-    else if (e.kind === 'channel') panelItem($('#claimed'), `${e.box || 'unknown'} · ${timeOf(e.t)}`, e.text || '');
+    else if (e.kind === 'channel') panelItem($('#claimed'), `${e.box || 'unknown'} · ${timeOf(e.t)}`, e.text || '', null, e.box ? `chat--${e.box}` : null);
     else if (e.kind === 'truth') {
       const cls = e.event === 'deface' ? 'truth--deface' : e.event === 'capture' ? 'truth--capture' : '';
       panelItem($('#observed'), `${timeOf(e.t)} · ${e.event || 'event'}`, e.text || '', cls);

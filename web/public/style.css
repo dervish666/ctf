@@ -365,32 +365,55 @@ select:hover{border-color:var(--accent)}
 
 .panes{display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px}
 @media(max-width:860px){.panes{grid-template-columns:1fr}}
-.pane{background:var(--bg-inset); border:1px solid var(--border); border-radius:7px;
+/* Each contestant carries an identity colour — the header, top rule, its who-label
+   and its tool lines — so the three terminals read apart at a glance. */
+.panes>.pane:nth-child(1){--agent:var(--good)}
+.panes>.pane:nth-child(2){--agent:var(--accent)}
+.panes>.pane:nth-child(3){--agent:var(--anomaly)}
+.pane{background:var(--bg-inset); border:1px solid var(--border);
+  border-top:2px solid var(--agent,var(--border-strong)); border-radius:7px;
   display:flex; flex-direction:column; min-height:0; overflow:hidden}
 .pane h3{margin:0; padding:9px 12px; border-bottom:1px solid var(--border);
   font-family:ui-monospace,Menlo,monospace; font-size:.7rem; letter-spacing:.11em;
-  text-transform:uppercase; color:var(--text-dim); display:flex; align-items:center; gap:8px}
-.pane h3 .st{margin-left:auto; font-size:.6rem; letter-spacing:.08em}
-.stream{height:min(52vh,520px); overflow:auto; padding:9px 11px; font-family:ui-monospace,Menlo,monospace;
+  text-transform:uppercase; color:var(--agent,var(--text-dim)); display:flex; align-items:center; gap:8px}
+.pane h3 .st{margin-left:auto; font-size:.6rem; letter-spacing:.08em; color:var(--text-faint)}
+/* Taller by default; drag the bottom edge to resize — native handle, thin border kept. */
+.stream{height:min(60vh,560px); min-height:170px; resize:vertical; overflow:auto;
+  padding:9px 11px; font-family:ui-monospace,Menlo,monospace;
   font-size:12px; line-height:1.5; color:var(--text); overscroll-behavior:contain; scroll-behavior:auto}
 .stream .ev{margin:0 0 7px; white-space:pre-wrap; overflow-wrap:anywhere}
-.stream .ev .who{color:var(--text-faint); font-size:.9em}
-.stream .ev--tool{color:var(--slate)}
-.stream .ev--think{color:var(--anomaly); font-style:italic}
-.stream .ev--out{color:var(--text-dim)}
+.stream .ev .who{color:var(--agent,var(--text-faint)); font-size:.9em; font-weight:600}
+.stream .ev--say{color:var(--text)}
+.stream .ev--tool{color:var(--agent,var(--slate)); font-weight:500}
+.stream .ev--think{color:var(--text-faint); font-style:italic; opacity:.9}
+.stream .ev--out{color:var(--text-dim); background:var(--bg-raised); border:1px solid var(--border);
+  border-radius:3px; padding:4px 7px; margin-top:2px; max-height:14em; overflow:auto}
 .stream .quiet{color:var(--text-faint); font-style:italic}
+/* per-type filters above the panes */
+.filters{display:flex; flex-wrap:wrap; gap:6px; margin:0 0 11px; align-items:center}
+.filters .flab{font-family:ui-monospace,Menlo,monospace; font-size:.6rem; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--text-faint); margin-right:2px}
+.filters .flt{font-family:ui-monospace,Menlo,monospace; font-size:.66rem; letter-spacing:.05em;
+  text-transform:uppercase; padding:4px 11px; border:1px solid var(--border-strong); border-radius:100px;
+  background:transparent; color:var(--text-dim); cursor:pointer; min-height:30px}
+.filters .flt[aria-pressed="false"]{opacity:.5; text-decoration:line-through; color:var(--text-faint)}
+.filters .flt:focus-visible{outline:2px solid var(--accent); outline-offset:2px}
+.panes.hide-say .ev--say,.panes.hide-tool .ev--tool,.panes.hide-think .ev--think,.panes.hide-out .ev--out{display:none}
 
 .split{display:grid; gap:12px}
 .panel{border:1px solid var(--border-strong); border-radius:7px; background:var(--bg-raised); overflow:hidden}
 .panel > h3{margin:0; padding:10px 14px; border-bottom:1px solid var(--border); font-size:.72rem;
   font-family:ui-monospace,Menlo,monospace; letter-spacing:.13em; text-transform:uppercase}
-.panel--claimed > h3{color:var(--warn)}
+.panel--claimed > h3{color:var(--text-dim)}
 .panel--observed > h3{color:var(--good)}
-.panel .body{max-height:min(34vh,340px); overflow:auto; padding:11px 14px; overscroll-behavior:contain}
-.panel .item{margin:0 0 11px; font-size:.84rem; line-height:1.5}
+.panel .body{max-height:min(52vh,520px); resize:vertical; overflow:auto; padding:11px 14px; overscroll-behavior:contain}
+/* Agent chat: colour each message by speaker + a left rule, so a flood stays legible. */
+.chat--ctf-1{--spk:var(--good)} .chat--ctf-2{--spk:var(--accent)} .chat--ctf-3{--spk:var(--anomaly)}
+.panel .item{margin:0 0 9px; font-size:.82rem; line-height:1.45; padding-left:9px;
+  border-left:2px solid var(--spk,var(--border))}
 .panel .item:last-child{margin-bottom:0}
 .panel .item .meta{display:block; font-family:ui-monospace,Menlo,monospace; font-size:.62rem;
-  letter-spacing:.08em; text-transform:uppercase; color:var(--text-faint); margin-bottom:2px}
+  letter-spacing:.08em; text-transform:uppercase; color:var(--spk,var(--text-faint)); margin-bottom:2px}
 .panel .item .body-text{white-space:pre-wrap; overflow-wrap:anywhere}
 .panel .none{color:var(--text-faint); font-style:italic; font-size:.84rem; margin:0}
 .truth--capture{color:var(--warn); font-weight:600}
