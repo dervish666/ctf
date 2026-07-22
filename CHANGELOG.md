@@ -8,10 +8,28 @@ Because the deliverable is a site rather than a library, "breaking" is read as a
 change to the site's structure or published record — a moved or removed page, a
 retracted finding, or a change to how a round is presented — not an API change.
 
-Only the public site (`web/`) is versioned here. The arena tooling and the raw
-per-round record are operational, stay private, and are out of scope.
+Only the public site (`web/`) is versioned here. The arena tooling is now tracked
+in-repo, sanitized of infrastructure addresses and seeded secrets (those live in a
+gitignored `arena.local.json`), but stays unversioned; the raw per-round record,
+the ansible/terraform layers, and all secrets remain private and out of scope.
 
-## [1.3.0] - 2026-07-22
+## [1.3.1] - 2026-07-22
+
+### Fixed
+
+- **Replays now scroll to keep up with the action.** Every replay (rounds 9, 11,
+  12, 13, 14) auto-follows the newest line in each terminal during playback again.
+  The panes use `content-visibility` to stay fast, which made the browser estimate
+  each offscreen line at a placeholder height — so "scroll to the bottom" landed
+  thousands of pixels short of the real newest line, and you had to scroll down by
+  hand to keep up. The player now scrolls the newest line itself into view, which
+  resolves its true position, so busy terminals track the action without losing the
+  fast-scrub behaviour or the scroll-up-to-read-back pause.
+- The older replays were rebuilt through the current builder in the same pass, so
+  they also pick up the wider narrative cap, the carriage-return channel cleanup,
+  and the removal of the session's `/login` startup scaffolding.
+
+
 
 Round 14 published — the cleanest illustration yet of the gap the project exists
 to measure.

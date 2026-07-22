@@ -177,6 +177,11 @@ const scrollBoxes = [];
 function pinnable(el){
   el.dataset.pin = "1";
   el.addEventListener("scroll", ()=>{
+    // Ignore the scroll our own auto-follow just caused. content-visibility makes
+    // scrollHeight an estimate that grows as offscreen lines render, so a follow
+    // scroll fires a scroll event whose apparent gap would otherwise trip this to
+    // "unpinned" and the pane would stop following after a single line.
+    if(el._prog){ el._prog = false; return; }
     el.dataset.pin = (el.scrollHeight - el.scrollTop - el.clientHeight < 24) ? "1" : "0";
   });
   scrollBoxes.push(el);
@@ -230,6 +235,7 @@ const chanNodes = [];
   el.appendChild(document.createTextNode(c.x));
   chanlog.appendChild(el); chanNodes.push({el,t:c.t,on:false});
 });
+let chanLast = null;   // newest visible channel line, for auto-follow
 if(!chanNodes.length) document.getElementById("chan").style.display="none";
 else pinnable(chanlog);
 
@@ -256,31 +262,41 @@ let cur=0, playing=false, raf=null, last=0;
 // and is what made scrubbing cost ~175ms a frame on a 962-event round.
 function applyVisibility(ms){
   for(const id in panes){
-    const nodes = panes[id].nodes;
+    const nodes = panes[id].nodes; let last=null;
     for(let i=0;i<nodes.length;i++){
       const n = nodes[i], show = n.t<=ms && filters[n.k];
       if(show !== n.on){ n.el.classList.toggle("on", show); n.on = show; }
+      if(show) last = n.el;                 // remember the newest visible line to follow
     }
+    panes[id].last = last;
   }
+  let lastC=null;
   for(let i=0;i<chanNodes.length;i++){
     const n = chanNodes[i], show = n.t<=ms;
     if(show !== n.on){ n.el.classList.toggle("on", show); n.on = show; }
+    if(show) lastC = n.el;
   }
+  chanLast = lastC;
 }
-// Hidden events are display:none and occupy no space, so the newest visible event is always
-// the last thing in the box: scrolling to the bottom is equivalent to measuring it, and costs
-// one read instead of three per node.
-function stickToBottom(el){
-  if(el.dataset.pin === "0") return;
-  const max = el.scrollHeight - el.clientHeight;
-  if(max > 0 && max - el.scrollTop > 1) el.scrollTop = max;   // skip the write when already pinned at the end
+// Follow by scrolling the newest visible line itself into view — NOT by scrolling to
+// scrollHeight. content-visibility:auto sizes offscreen lines from a small placeholder,
+// so scrollHeight runs thousands of px short of the real bottom; "scroll to scrollHeight"
+// then lands well above the newest line and falls further behind every frame (you have to
+// keep scrolling down by hand). scrollIntoView resolves the node's true position and lands
+// it at the bottom in one go. Only scrolls when the newest line is actually below the fold,
+// so the _prog guard isn't left stale.
+function stickToBottom(el, last){
+  if(el.dataset.pin === "0" || !last) return;
+  if(last.getBoundingClientRect().bottom <= el.getBoundingClientRect().bottom + 1) return;
+  el._prog = true;
+  last.scrollIntoView({block:"end", inline:"nearest"});
 }
 
 function render(ms){
   cur=ms;
   applyVisibility(ms);
-  for(const id in panes) stickToBottom(panes[id].stream);
-  if(chanlog) stickToBottom(chanlog);
+  for(const id in panes) stickToBottom(panes[id].stream, panes[id].last);
+  if(chanlog) stickToBottom(chanlog, chanLast);
   scrub.value = Math.round(1000*ms/DUR);
   clock.innerHTML = "<b>"+fmt(ms)+"</b> / "+fmt(DUR);
 }
