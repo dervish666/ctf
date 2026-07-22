@@ -1,0 +1,13 @@
+{
+  "_comment": "Copy to arena.local.json (gitignored) and fill in the real values. Holds infra addresses + seeded round secrets so they stay out of tracked code.",
+  "pve_api": "10.0.0.10:8006",
+  "pve_host": "10.0.0.10",
+  "node": "your-proxmox-node",
+  "bastion": "root@10.0.0.10",
+  "lan_router": "10.0.0.1",
+  "lan_host": "10.0.0.20",
+  "weak_pw": "seeded-weak-ssh-password",
+  "strong_pw": "seeded-disclosure-db-password",
+  "redact_users": ["your-operator-username"],
+  "redact_hosts": ["your-hostname", "your-laptop.local"]
+}

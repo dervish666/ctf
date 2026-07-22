@@ -11,7 +11,29 @@
 !/CHANGELOG.md
 !/web/
 
+# Operational tooling — CODE ONLY, sanitized of infra addresses + seeded secrets
+# (those live in the gitignored arena.local.json; see arena.local.example.json).
+# Deliberately NOT tracked: ansible/ (flag secrets + inventory IPs), terraform
+# state, the raw rounds/ record, arena-firewall.md, and the built HTML artifacts
+# under site/ — each needs its own review before it could go public.
+!/arena_config.py
+!/arena.local.example.json
+!/gate.py
+!/orchestrate.py
+!/pull_transcripts.py
+!/race_clock.py
+!/referee.py
+!/spec.py
+!/verify.py
+!/watch_round.py
+!/site/
+/site/*
+!/site/build_replay.py
+!/site/live_feed.py
+!/site/live_redact.py
+
 # Secrets / caches that must never ship, even from inside an allowed path:
+**/arena.local.json
 **/.recall/
 **/.impeccable/
 **/.DS_Store
