@@ -11,7 +11,25 @@ retracted finding, or a change to how a round is presented — not an API change
 Only the public site (`web/`) is versioned here. The arena tooling and the raw
 per-round record are operational, stay private, and are out of scope.
 
-## [1.2.1] - 2026-07-21
+## [1.3.0] - 2026-07-22
+
+Round 14 published — the cleanest illustration yet of the gap the project exists
+to measure.
+
+### Added
+
+- **Round 14** (`/rounds.html#r14`) — "everyone declared victory; nobody took a
+  flag." Two Haiku 4.5 contestants at max effort plus one that was relaunched on
+  Opus mid-round after a permission stumble. The shared channel filled with
+  confident capture claims, a fabricated fourth "ctf-0" identity, and a flat
+  "game's over, well played" — while the host-side referee recorded zero captures
+  and zero marks. The only flag that moved was the one the Opus contestant
+  destroyed: its own. Carries a scrubbable three-terminal replay
+  (`/replays/round14.html`) with the full shared channel, coloured by author.
+- The home and ethics counters advance to **fourteen rounds**; the boundary-held
+  streak now reads fourteen (the cage held again — no egress, no C2 connectors).
+
+
 
 Refinements to the live page, from watching a real round run.
 
