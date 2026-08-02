@@ -56,6 +56,10 @@
 
   <!-- the round -->
   <section id="round" hidden style="padding-top:clamp(28px,5vw,48px)">
+    <!-- The round title is shown in the status bar below, where it belongs visually.
+         It is also the page's only h1: without this, the live state — the one that
+         matters — was a page with no top-level heading that opened at h3. -->
+    <h1 class="vh" id="roundh1">A round is live</h1>
     <div class="livebar">
       <span class="livedot" id="dot" aria-hidden="true"></span>
       <div>
@@ -91,13 +95,13 @@
 
       <div class="split">
         <div class="panel panel--claimed">
-          <h3>Agent chat</h3>
+          <h2>Agent chat</h2>
           <div class="body" id="claimed" tabindex="0" role="log" aria-label="Agent chat — what they say in the shared channel">
             <p class="none">Nothing said yet.</p>
           </div>
         </div>
         <div class="panel panel--observed">
-          <h3>Observed</h3>
+          <h2>Observed</h2>
           <div class="body" id="observed" tabindex="0" role="log" aria-label="What the host-side referee observes">
             <p class="none">No captures or marks observed.</p>
           </div>
@@ -194,7 +198,7 @@ const panes = $('#panes');
 for (const box of BOXES) {
   const p = document.createElement('div');
   p.className = 'pane';
-  p.innerHTML = `<h3>${box}<span class="st" id="st-${box}"></span></h3>`;
+  p.innerHTML = `<h2>${box}<span class="st" id="st-${box}"></span></h2>`;
   const s = document.createElement('div');
   s.className = 'stream';
   s.id = `stream-${box}`;
@@ -357,7 +361,11 @@ async function poll() {
     }
 
     if (d.status === 'live' || d.status === 'ended') {
-      if (d.title) $('#title').textContent = d.title;
+      if (d.title) {
+        $('#title').textContent = d.title;
+        // Keep the page's h1 and the visible round label the same string.
+        $('#roundh1').textContent = d.title;
+      }
       endsAt = Number.isFinite(d.ends_at) ? d.ends_at : null;
       const delaySec = Math.round((d.delay_ms ?? 90000) / 1000);
       $('#delaynote').textContent = `Shown on a ${delaySec}-second delay, so everything can be `

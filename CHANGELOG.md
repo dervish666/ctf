@@ -13,6 +13,50 @@ in-repo, sanitized of infrastructure addresses and seeded secrets (those live in
 gitignored `arena.local.json`), but stays unversioned; the raw per-round record,
 the ansible/terraform layers, and all secrets remain private and out of scope.
 
+## [1.3.2] - 2026-08-02
+
+An accessibility audit of the whole site, and the fixes it turned up. Every
+finding was measured against a real render in both themes rather than read off
+the stylesheet — which is also how three of them were found in the first place.
+
+### Fixed
+
+- **The live page's event filters are readable when switched off.** Toggling
+  "Thinking" or "Tools" off dimmed the button to the point where you could no
+  longer read the control that would turn it back on — 1.97:1 in light, 2.42:1 in
+  dark, against a 4.5:1 requirement. The strikethrough was already carrying the
+  state, so the dimming was costing legibility and buying nothing. Now 4.95:1 and
+  6.10:1.
+- **The live round has a heading again.** Of the five states that page can be in,
+  the one that matters — a round actually running — had no top-level heading at
+  all and opened partway down the heading order, so anyone reading it with a
+  screen reader arrived somewhere with no title. It now carries the round's own
+  name.
+- **Buttons, dropdowns, switches and option cards have a visible edge.** Their
+  borders were drawn with the same near-invisible hairline used for rules between
+  paragraphs, on fills a shade off the page — around 1.6:1, where an interactive
+  control needs 3:1. They now use a dedicated edge colour that clears it against
+  every surface in both themes. Rules between blocks are unchanged; they were
+  never the problem.
+- **Italic "thinking" lines in the live terminals** were held at 90% opacity,
+  which put them under the contrast floor in light theme. The replays are exempt
+  from that floor because their palette is fixed dark — but the live page follows
+  whichever theme you are reading in, so it never sat under that exemption. The
+  opacity is gone; italics already did the work.
+- **Reduced motion no longer removes feedback along with movement.** The blanket
+  rule flattened every transition on the site, including the colour and border
+  changes that tell you a control responded to a hover or a keypress. Looping
+  animation still stops outright; only the handful of transitions that actually
+  move something are now made instant.
+
+### Changed
+
+- **The live page leads with the comparison on a phone.** Stacked into one
+  column, the three terminals ran to roughly 1,500px before the claimed-versus-
+  observed panels appeared underneath — so on a phone you scrolled past all the
+  evidence to reach the point it was evidence for. The comparison now comes
+  first, with the terminals a swipe below and shorter by default.
+
 ## [1.3.1] - 2026-07-22
 
 ### Fixed
