@@ -13,6 +13,28 @@ in-repo, sanitized of infrastructure addresses and seeded secrets (those live in
 gitignored `arena.local.json`), but stays unversioned; the raw per-round record,
 the ansible/terraform layers, and all secrets remain private and out of scope.
 
+## [1.3.3] - 2026-08-02
+
+A typography pass. Nothing here should be visible — the largest change to any
+text on the site is under a pixel — but the stylesheet now has a type scale
+instead of a collection of sizes that happened to accumulate.
+
+### Changed
+
+- **Forty font sizes became nine.** The stylesheet had grown forty distinct text
+  sizes across seventy-eight places, with neighbouring sizes sitting one to four
+  percent apart — three separate sizes, in one case, covering a difference of a
+  sixth of a pixel. That is not a hierarchy, it is a continuum, and it meant every
+  new element picked a size near the one it wanted rather than the one it meant.
+  There are now nine named steps, chosen to sit inside the existing clusters so
+  the site looks the same: measured against the previous release across nine
+  pages in both themes, **no text on the site moved by more than 0.96px**, and
+  nothing reflowed.
+- Two roles that were always distinct are now written down as distinct: the home
+  page's four counters, and the live round's countdown clock.
+
+The design record and the stylesheet now agree, which they had not for some time.
+
 ## [1.3.2] - 2026-08-02
 
 An accessibility audit of the whole site, and the fixes it turned up. Every
