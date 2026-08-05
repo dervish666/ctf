@@ -6,13 +6,17 @@
 <meta name="robots" content="noindex, nofollow">
 <title>Review queue — The Arena</title>
 <link rel="stylesheet" href="/style.css">
-<script>try{var t=localStorage.getItem('arena-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){console.warn('theme: preference not read —',e.message)}</script>
+<link rel="preload" as="font" type="font/woff2" href="/fonts/stix2text-latin.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="/fonts/plexmono-400-latin.woff2" crossorigin>
+<script>document.documentElement.classList.add('js');try{var t=localStorage.getItem('arena-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){console.warn('theme: preference not read —',e.message)}</script>
+<script src="/lib/site.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 
 <header class="topbar"><div class="wrap">
   <a class="brand" href="/"><span class="sig" aria-hidden="true"></span>The&nbsp;Arena</a>
+  <span class="vol">Vol.&nbsp;1 · 2026 · ongoing</span>
   <nav>
     <a class="navlink" href="/vote.html">Ballot</a>
     <a class="navlink" href="/configure.html">Builder</a>
@@ -21,20 +25,25 @@
 </div></header>
 
 <main id="main"><div class="wrap">
-  <header class="pagehead">
-    <span class="eyebrow">§ Internal</span>
-    <h1>Review queue</h1>
-    <p class="dek">Proposed rounds waiting on a human. Nothing here is visible on the public ballot until it is
-    approved. This page holds no privilege of its own: the token below is what the API checks.</p>
-  </header>
+  <div class="sec sec--flow sec--open sec--tight">
+    <div class="rail">
+      <span class="mark" aria-hidden="true">§1</span>
+      <p class="railnote">Internal — the queue. Nothing here is public until a human approves it.</p>
+    </div>
+    <div class="secbody">
+      <header class="pagehead">
+        <p class="eyebrow">Internal</p>
+        <h1>Review queue</h1>
+        <p class="dek">Proposed rounds waiting on a human. Nothing here is visible on the public ballot until it is
+        approved. This page holds no privilege of its own: the token below is what the API checks.</p>
+      </header>
+    </div>
+  </div>
 
   <section>
     <div class="field" style="max-width:460px">
       <label for="token">Admin token</label>
-      <input id="token" type="password" autocomplete="current-password" placeholder="paste the admin token"
-        style="width:100%; min-height:38px; background:var(--bg-inset); color:var(--text);
-               border:1px solid var(--border-strong); border-radius:5px; padding:8px 9px;
-               font-family:ui-monospace,Menlo,monospace; font-size:.84rem">
+      <input id="token" type="password" autocomplete="current-password" placeholder="paste the admin token">
       <p class="footnote" style="margin-top:6px">Held in this tab only, and forgotten when it closes.</p>
     </div>
     <div class="actions" style="max-width:460px">
@@ -132,7 +141,7 @@ function row(item) {
 
   const spec = document.createElement('details');
   const summary = document.createElement('summary');
-  summary.style.cssText = 'cursor:pointer; font-size:.82rem; color:var(--accent)';
+  summary.style.cssText = 'cursor:pointer; font-size:var(--fs-small); color:var(--accent)';
   summary.textContent = 'Specification';
   spec.appendChild(summary);
   const pre = document.createElement('pre');
@@ -202,18 +211,5 @@ $('#load').addEventListener('click', async () => {
 if (token()) $('#load').click();
 </script>
 
-<script>
-const root=document.documentElement, themeBtn=document.getElementById('theme');
-const currentTheme=()=>root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
-const syncTheme=()=>themeBtn.setAttribute('aria-pressed',String(currentTheme()==='dark'));
-syncTheme();
-themeBtn.addEventListener('click',()=>{
-  const next=currentTheme()==='dark'?'light':'dark';
-  root.setAttribute('data-theme',next);
-  syncTheme();
-  try{localStorage.setItem('arena-theme',next)}
-  catch(e){console.warn('theme: preference not persisted —',e.message)}
-});
-</script>
 </body>
 </html>

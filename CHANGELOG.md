@@ -13,6 +13,66 @@ in-repo, sanitized of infrastructure addresses and seeded secrets (those live in
 gitignored `arena.local.json`), but stays unversioned; the raw per-round record,
 the ansible/terraform layers, and all secrets remain private and out of scope.
 
+## [2.0.0] - 2026-08-05
+
+The site is redesigned. Same record, same words, new document: **"The
+Preprint"** — a working paper with a numbered spine, an abstract in every
+margin, and structure drawn in ink rules rather than boxes. Major because every
+page changed shape and the design contract in `DESIGN.md` was rewritten to match
+what shipped, not because anything in the published record moved.
+
+### Changed
+
+- **The § rail.** Every editorial section is now a two-column spread: a 150px
+  margin carrying a `§N` mark and a one-line abstract of what the section holds,
+  then the body. Reading only the left edge of a page now tells you what the
+  document contains. Below 900px the rail turns horizontal rather than hiding —
+  the notes are content, not decoration.
+- **The accent moved from sodium amber to process blue** (`#925000` → `#2d5fa8`
+  light, `#e8a33d` → `#6f9ade` dark), on a cooler, lighter ground. Both themes
+  were re-tuned as peers; neither is derived from the other.
+- **Two self-hosted typefaces.** STIX Two Text and IBM Plex Mono replace the
+  system serif and mono stacks, as latin/latin-ext woff2 subsets served
+  same-origin with `font-display: swap` and preloaded per page (~80KB on the
+  critical path). The old "no web fonts" rule is now "no third-party font
+  requests", which is the part that was actually load-bearing.
+- **Editorial surfaces lost their boxes.** The contents list, findings grid,
+  ledger and ballot are now hairline spreads opened by a 1px ink rule, with no
+  card, fill, radius or shadow. The masthead and footer are bracketed with 2px
+  ink rules. Nav pills and the theme toggle's recessed circle went with them.
+- **The five replays were retuned and rebuilt** from the round transcripts. The
+  fork keeps its own tokens and its own system-font stack; `--amber` became
+  `--accent` at the new blue, and `--think` moved to a magenta violet because
+  the old one was no longer separable from a blue accent. The diff against the
+  previous build is 32 colour lines per file and nothing else, and the builder's
+  redaction self-check passes on all five.
+- **An entrance sequence**, ~1.6s, plus scroll reveals and a stat count-up.
+  Everything that moves reveals content already in the DOM.
+- The per-page theme script became one shared, deferred `lib/site.js`.
+
+### Fixed
+
+- **The stalemate chip failed AA on an open round row.** `slate` measured
+  **4.43:1** against the row's tinted ground while passing on the plain one —
+  the trap `DESIGN.md` documents, found again by auditing with every `<details>`
+  open. Light `slate` moved `#5a6771` → `#4f5b65`.
+- **Two form controls had 1.86:1 edges in both themes.** The `textarea`s on the
+  builder and the token `input` on the review queue carried inline
+  `--border-strong` borders — an editorial hairline doing a control's job, and
+  an SC 1.4.11 failure. They are styled from the sheet with `--control-edge` now,
+  and their inline styles are gone.
+- `text-faint` ships at `#59646f` rather than the comp's `#5f6b76`, which is
+  4.31:1 on the recessed ground the form pages actually put it on.
+- The live page's instrument no longer widens the whole page: the masthead rule,
+  the § rail and the footer stay on the 1120px measure while the three terminals
+  break out to 1320px.
+
+Audited live at 1280px and 390px across eleven pages × two themes — 22 renders,
+every element with its own text node, backgrounds composited up the ancestor
+chain, every `<details>` open, plus a separate pass over every control edge.
+Zero failures remain. No-JS and no-`IntersectionObserver` both render the full
+page.
+
 ## [1.3.3] - 2026-08-02
 
 A typography pass. Nothing here should be visible — the largest change to any

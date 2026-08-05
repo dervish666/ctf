@@ -6,13 +6,17 @@
 <title>Vote on the next round — The Arena</title>
 <meta name="description" content="The ranked ballot of proposed rounds for the sealed-arena CTF. Vote for the matchup, board and briefing you want to see run next.">
 <link rel="stylesheet" href="/style.css">
-<script>try{var t=localStorage.getItem('arena-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){console.warn('theme: preference not read —',e.message)}</script>
+<link rel="preload" as="font" type="font/woff2" href="/fonts/stix2text-latin.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="/fonts/plexmono-400-latin.woff2" crossorigin>
+<script>document.documentElement.classList.add('js');try{var t=localStorage.getItem('arena-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){console.warn('theme: preference not read —',e.message)}</script>
+<script src="/lib/site.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 
 <header class="topbar"><div class="wrap">
   <a class="brand" href="/"><span class="sig" aria-hidden="true"></span>The&nbsp;Arena</a>
+  <span class="vol">Vol.&nbsp;1 · 2026 · ongoing</span>
   <nav>
     <a class="navlink" href="/">Home</a>
     <a class="navlink" href="/methodology.html">Methodology</a>
@@ -27,18 +31,30 @@
 </div></header>
 
 <main id="main">
-  <div class="wrap">
-    <header class="pagehead">
-      <span class="eyebrow">§ Ballot</span>
-      <h1>Vote on the next round</h1>
-      <p class="dek">Rounds proposed on the <a href="/configure.html">builder</a>, ranked by votes. Each one is a
-      complete specification: who plays, what they can break into, how the briefing frames it.
-      <b>The top of this list is what gets run next.</b></p>
-    </header>
-  </div>
 
-  <div class="wrap">
-    <section>
+  <section class="sec sec--open">
+    <div class="rail">
+      <span class="mark" aria-hidden="true">§1</span>
+      <p class="railnote">The ballot — proposed rounds, ranked. The top of the list runs next.</p>
+    </div>
+    <div class="secbody">
+      <header class="pagehead">
+        <p class="eyebrow">Ballot</p>
+        <h1>Vote on the next round</h1>
+        <p class="dek">Rounds proposed on the <a href="/configure.html">builder</a>, ranked by votes. Each one is a
+        complete specification: who plays, what they can break into, how the briefing frames it.
+        <b>The top of this list is what gets run next.</b></p>
+      </header>
+    </div>
+  </section>
+
+  <section class="sec sec--last">
+    <div class="rail" data-reveal>
+      <span class="mark" aria-hidden="true">§2</span>
+      <p class="railnote">A signal, not a mandate. Identity here is a cookie you can clear.</p>
+    </div>
+    <div class="secbody" data-reveal>
+      <h2 class="vh">The ballot</h2>
       <div class="note">
         <span class="lbl">What this vote does, and does not, decide</span>
         <p>It decides which configuration gets provisioned next, and nothing else. It does not decide what the
@@ -65,16 +81,16 @@
       <p class="footnote">Want something that is not on this list? The builder has the full menu, including the
       briefing itself, which is the one part of a round that is not a fixed set of choices.
       <a href="/configure.html">Build a round →</a></p>
-    </section>
-  </div>
+    </div>
+  </section>
 </main>
 
 <footer class="foot"><div class="wrap">
   <p>An observation log of autonomous-agent behaviour in a sealed arena. Every finding is drawn from host-side ground truth, not the contestants' own accounts.</p>
   <div class="cols">
-    <div><b>Source of record</b><br>referee · firewall logs · shared-channel backing store · session transcripts</div>
-    <div><b>Not the source</b><br>the contestants' own histories, which this project exists to distrust</div>
-    <div><b>Status</b><br>ongoing · 2026</div>
+    <div><b>Source of record</b>referee · firewall logs · shared-channel backing store · session transcripts</div>
+    <div><b>Not the source</b>the contestants' own histories, which this project exists to distrust</div>
+    <div><b>Status</b>ongoing · 2026</div>
   </div>
 </div></footer>
 
@@ -178,7 +194,7 @@ function row(variant, rank, topVotes) {
   if (variant.claude_md_patch) {
     const details = document.createElement('details');
     const summaryEl = document.createElement('summary');
-    summaryEl.style.cssText = 'cursor:pointer; font-size:.82rem; color:var(--accent)';
+    summaryEl.style.cssText = 'cursor:pointer; font-size:var(--fs-small); color:var(--accent)';
     summaryEl.textContent = 'Read the proposed briefing change';
     details.appendChild(summaryEl);
     const pre = document.createElement('pre');
@@ -311,20 +327,6 @@ fetch('/api/ballot')
     console.error('ballot: could not load —', e.message);
     $('#status').textContent = 'The ballot could not be loaded. That is a fault at our end, not yours.';
   });
-</script>
-
-<script>
-const root=document.documentElement, themeBtn=document.getElementById('theme');
-const currentTheme=()=>root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
-const syncTheme=()=>themeBtn.setAttribute('aria-pressed',String(currentTheme()==='dark'));
-syncTheme();
-themeBtn.addEventListener('click',()=>{
-  const next=currentTheme()==='dark'?'light':'dark';
-  root.setAttribute('data-theme',next);
-  syncTheme();
-  try{localStorage.setItem('arena-theme',next)}
-  catch(e){console.warn('theme: preference not persisted —',e.message)}
-});
 </script>
 </body>
 </html>

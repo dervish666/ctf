@@ -466,7 +466,7 @@ HTML = r"""<!doctype html>
   :root{
     --bg:#0b0f13; --panel:#0f161c; --inset:#0a0e12; --border:#212c35; --border-b:#31404b;
     --text:#dfe6ec; --dim:#8fa0ac; --faint:#70818c;
-    --amber:#e8a33d; --run:#63c2b4; --think:#8a7fb8; --capture:#e0655b; --say:#cfd8de;
+    --accent:#6f9ade; --run:#63c2b4; --think:#a98ada; --capture:#e0655b; --say:#cfd8de;
   }
   *,*::before,*::after{box-sizing:border-box}
   html,body{height:100%}
@@ -474,19 +474,19 @@ HTML = r"""<!doctype html>
     font-family:"Iowan Old Style",Palatino,Georgia,serif;
     display:flex; flex-direction:column; overflow:hidden}
   .mono{font-family:ui-monospace,"SF Mono","JetBrains Mono",Menlo,Consolas,monospace}
-  :focus-visible{outline:2px solid var(--amber); outline-offset:2px}
+  :focus-visible{outline:2px solid var(--accent); outline-offset:2px}
 
   .rhead{flex:none; padding:12px clamp(14px,3vw,26px); border-bottom:1px solid var(--border);
     display:flex; align-items:center; gap:18px; flex-wrap:wrap; background:var(--panel)}
-  .rhead .sig{width:8px;height:8px;border-radius:50%;background:var(--amber);animation:ping 2.6s ease-out infinite;flex:none}
-  @keyframes ping{0%{box-shadow:0 0 0 0 rgba(232,163,61,.5)}70%,100%{box-shadow:0 0 0 7px transparent}}
+  .rhead .sig{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:ping 2.6s ease-out infinite;flex:none}
+  @keyframes ping{0%{box-shadow:0 0 0 0 rgba(111,154,222,.5)}70%,100%{box-shadow:0 0 0 7px transparent}}
   .rhead h1{font-size:1rem; font-weight:600; margin:0; letter-spacing:.01em}
   .rhome{position:relative; display:inline-flex; align-items:center; gap:9px; color:var(--text); border:0; text-decoration:none;
     font-size:1rem; font-weight:600; letter-spacing:.01em; transition:color .15s}
   .rhome::after{content:""; position:absolute; inset:-10px 0}
-  .rhome:hover{color:var(--amber); text-decoration:underline; text-underline-offset:3px}
+  .rhome:hover{color:var(--accent); text-decoration:underline; text-underline-offset:3px}
   .rhome::before{content:"‹"; color:var(--faint); font-size:1.1rem; margin-right:1px}
-  .rhome:hover::before{color:var(--amber)}
+  .rhome:hover::before{color:var(--accent)}
   .rhead .sub{font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; color:var(--faint)}
   .filters{display:flex; gap:7px; margin-left:auto; flex-wrap:wrap; align-items:center}
   .filters .flabel{font-size:.62rem; letter-spacing:.13em; text-transform:uppercase; color:var(--faint); margin-right:2px}
@@ -502,7 +502,7 @@ HTML = r"""<!doctype html>
 
   .noscript-note{flex:none; margin:0; padding:14px clamp(14px,3vw,26px); border-bottom:1px solid var(--border-b);
     background:var(--inset); color:var(--text); font-size:.92rem; line-height:1.5}
-  .noscript-note a{color:var(--amber)}
+  .noscript-note a{color:var(--accent)}
   .stage{flex:1; min-height:0; display:grid; grid-template-columns:repeat(3,1fr); gap:1px; background:var(--border)}
   .pane{background:var(--panel); min-width:0; display:flex; flex-direction:column; min-height:0}
   .pane > header{flex:none; padding:9px 14px; border-bottom:1px solid var(--border);
@@ -510,7 +510,7 @@ HTML = r"""<!doctype html>
   .pane h2{margin:0; font-size:.82rem; letter-spacing:.09em; text-transform:uppercase; font-family:ui-monospace,Menlo,monospace}
   .pane .who{font-size:.66rem; color:var(--dim)}
   .pane .role{margin-left:auto; font-size:.64rem; font-style:italic; color:var(--faint)}
-  .c1 h2{color:var(--say)} .c2 h2{color:var(--amber)} .c3 h2{color:var(--think)}
+  .c1 h2{color:var(--say)} .c2 h2{color:var(--accent)} .c3 h2{color:var(--think)}
   /* No scroll-behavior:smooth here. render() re-targets scrollTop every frame, which restarts a
      smooth animation before it can advance — the panes then never follow the newest line at all. */
   .stream{flex:1; min-height:0; overflow-y:auto; padding:12px 14px 40px;
@@ -524,17 +524,17 @@ HTML = r"""<!doctype html>
   .ev.on{display:block; animation:fade .25s ease both}
   @keyframes fade{from{opacity:0}to{opacity:1}}
   .ev .ts{color:var(--faint); font-size:10px; margin-right:8px; user-select:none}
-  .ev--think{color:var(--think); font-style:italic; opacity:.92; border-left:1px solid rgba(138,127,184,.55); padding-left:9px}
+  .ev--think{color:var(--think); font-style:italic; opacity:.92; border-left:1px solid rgba(169,138,218,.55); padding-left:9px}
   .ev--think .lbl{font-style:normal; font-size:9px; letter-spacing:.12em; text-transform:uppercase; opacity:.7; margin-right:6px}
   .ev--say{color:var(--say)}
   .ev--run{color:var(--run)}
-  .ev--prompt{color:var(--amber); font-weight:600}
+  .ev--prompt{color:var(--accent); font-weight:600}
   .ev--out{color:var(--dim); background:var(--inset); border:1px solid var(--border); border-radius:3px; padding:6px 9px; font-size:11px; max-height:15em; overflow:auto}
 
   .controls{flex:none; display:flex; align-items:center; gap:14px; padding:12px clamp(14px,3vw,26px);
     border-top:1px solid var(--border); background:var(--panel)}
   .pbtn{position:relative;width:38px;height:38px;flex:none;border-radius:50%;border:1px solid var(--border-b);background:var(--inset);
-    color:var(--amber);font-size:14px;cursor:pointer;display:grid;place-items:center;transition:background .15s}
+    color:var(--accent);font-size:14px;cursor:pointer;display:grid;place-items:center;transition:background .15s}
   .pbtn::after{content:"";position:absolute;inset:-3px}
   .pbtn:hover{background:#131c23}
   .track{position:relative; flex:1; min-width:0; height:34px; display:flex; align-items:center}
@@ -543,8 +543,8 @@ HTML = r"""<!doctype html>
     background:transparent;outline-offset:4px;margin:0;cursor:pointer}
   .scrub::-webkit-slider-runnable-track{height:4px;border-radius:3px;background:var(--border-b)}
   .scrub::-moz-range-track{height:4px;border-radius:3px;background:var(--border-b)}
-  .scrub::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--amber);cursor:pointer;border:2px solid var(--bg);margin-top:-5.5px}
-  .scrub::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--amber);cursor:pointer;border:2px solid var(--bg)}
+  .scrub::-webkit-slider-thumb{-webkit-appearance:none;width:15px;height:15px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg);margin-top:-5.5px}
+  .scrub::-moz-range-thumb{width:15px;height:15px;border-radius:50%;background:var(--accent);cursor:pointer;border:2px solid var(--bg)}
   .markers{position:absolute; left:0; right:0; top:0; height:100%; pointer-events:none}
   .mk{position:absolute; top:0; height:100%; transform:translateX(-50%); pointer-events:auto}
   .mk i{position:absolute; top:3px; left:50%; transform:translateX(-50%); width:2px; height:9px; background:var(--capture); border-radius:2px}
@@ -555,7 +555,7 @@ HTML = r"""<!doctype html>
     opacity:0; transition:opacity .15s; pointer-events:none}
   .mk:hover .tip,.mk:focus-within .tip{opacity:1}
   .clock{flex:none; font-family:ui-monospace,Menlo,monospace; font-size:12px; color:var(--dim); font-variant-numeric:tabular-nums; min-width:150px; text-align:right}
-  .clock b{color:var(--amber); font-weight:500}
+  .clock b{color:var(--accent); font-weight:500}
   .speed{flex:none; background:var(--inset); color:var(--dim); border:1px solid var(--border); border-radius:4px;
     padding:6px 8px; font-family:ui-monospace,Menlo,monospace; font-size:11px}
 
@@ -572,7 +572,7 @@ HTML = r"""<!doctype html>
     content-visibility:auto; contain-intrinsic-size:auto 17px}
   .cln.on{display:block; animation:fade .25s ease both}
   .cln .ts{color:var(--faint); font-size:10px; margin-right:8px; user-select:none}
-  .cln.a1{color:var(--say)} .cln.a2{color:var(--amber)} .cln.a3{color:var(--think)}
+  .cln.a1{color:var(--say)} .cln.a2{color:var(--accent)} .cln.a3{color:var(--think)}
   .cln.a0{color:var(--faint)}  /* unattributable: command output dumped into the channel, or an unknown self-tag */
 
   @media (max-width:820px){
@@ -591,7 +591,7 @@ HTML = r"""<!doctype html>
   <span class="sub" id="rmeta"></span>
   <div class="filters" id="filters" role="group" aria-label="Filter event types">
     <span class="flabel">show</span>
-    <button class="flt" data-k="prompt" aria-pressed="true"><i style="background:var(--amber)"></i>prompt</button>
+    <button class="flt" data-k="prompt" aria-pressed="true"><i style="background:var(--accent)"></i>prompt</button>
     <button class="flt" data-k="think" aria-pressed="true"><i style="background:var(--think)"></i>thinking</button>
     <button class="flt" data-k="say" aria-pressed="true"><i style="background:var(--say)"></i>says</button>
     <button class="flt" data-k="run" aria-pressed="true"><i style="background:var(--run)"></i>runs</button>

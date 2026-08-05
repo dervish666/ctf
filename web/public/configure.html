@@ -6,13 +6,17 @@
 <title>Configure a round — The Arena</title>
 <meta name="description" content="Build a round of the sealed-arena CTF: pick the models, the reasoning effort, which vulnerabilities are seeded, how the briefing frames the game — and propose an edit to the briefing itself. Submitted rounds go to a public ballot.">
 <link rel="stylesheet" href="/style.css">
-<script>try{var t=localStorage.getItem('arena-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){console.warn('theme: preference not read —',e.message)}</script>
+<link rel="preload" as="font" type="font/woff2" href="/fonts/stix2text-latin.woff2" crossorigin>
+<link rel="preload" as="font" type="font/woff2" href="/fonts/plexmono-400-latin.woff2" crossorigin>
+<script>document.documentElement.classList.add('js');try{var t=localStorage.getItem('arena-theme');if(t)document.documentElement.setAttribute('data-theme',t)}catch(e){console.warn('theme: preference not read —',e.message)}</script>
+<script src="/lib/site.js" defer></script>
 </head>
 <body>
 <a class="skip" href="#main">Skip to content</a>
 
 <header class="topbar"><div class="wrap">
   <a class="brand" href="/"><span class="sig" aria-hidden="true"></span>The&nbsp;Arena</a>
+  <span class="vol">Vol.&nbsp;1 · 2026 · ongoing</span>
   <nav>
     <a class="navlink" href="/">Home</a>
     <a class="navlink" href="/methodology.html">Methodology</a>
@@ -27,15 +31,21 @@
 </div></header>
 
 <main id="main">
-  <div class="wrap">
-    <header class="pagehead">
-      <span class="eyebrow">§ Configure</span>
-      <h1>Build a round</h1>
-      <p class="dek">Every round in the log started as a set of choices on a page like this one: which models,
-      at what reasoning effort, what they can actually break into, and exactly how the briefing frames the game.
-      <b>The setup is the experiment.</b> Build one, and it goes to the ballot for other people to vote on.</p>
-    </header>
-  </div>
+  <section class="sec sec--open sec--tight">
+    <div class="rail">
+      <span class="mark" aria-hidden="true">§1</span>
+      <p class="railnote">The builder — every round in the log started as choices on a page like this.</p>
+    </div>
+    <div class="secbody">
+      <header class="pagehead">
+        <p class="eyebrow">Configure</p>
+        <h1>Build a round</h1>
+        <p class="dek">Every round in the log started as a set of choices on a page like this one: which models,
+        at what reasoning effort, what they can actually break into, and exactly how the briefing frames the game.
+        <b>The setup is the experiment.</b> Build one, and it goes to the ballot for other people to vote on.</p>
+      </header>
+    </div>
+  </section>
 
   <div class="wrap"><div class="grid">
     <form id="builder" aria-label="Round configuration">
@@ -121,9 +131,7 @@
           <label for="patch">Propose a change to the briefing</label>
           <textarea id="patch" name="patch" rows="7" maxlength="8000"
             placeholder="Paste a replacement section, or describe the change and why you think it would move the result. Leave empty to run the briefing as it stands."
-            style="width:100%; background:var(--bg-inset); color:var(--text); border:1px solid var(--border-strong);
-                   border-radius:5px; padding:11px 12px; font-family:ui-monospace,Menlo,monospace; font-size:.82rem;
-                   line-height:1.55; resize:vertical"></textarea>
+></textarea>
           <p class="footnote" style="margin-top:6px"><span id="patchcount">0</span> / 8000 characters. The same dials
           with a different briefing is a <em>different</em> variant, not a duplicate. The briefing is the thing this
           project actually measures.</p>
@@ -131,10 +139,8 @@
 
         <div class="field" style="margin-top:15px">
           <label for="rationale">Why this round? <span style="text-transform:none; letter-spacing:0">(optional, shown on the ballot)</span></label>
-          <textarea id="rationale" name="rationale" rows="2" maxlength="600"
-            placeholder="One line on what you think it would show."
-            style="width:100%; background:var(--bg-inset); color:var(--text); border:1px solid var(--border-strong);
-                   border-radius:5px; padding:11px 12px; font-family:inherit; font-size:.9rem; line-height:1.5; resize:vertical"></textarea>
+          <textarea id="rationale" name="rationale" rows="2" maxlength="600" class="prose-in"
+            placeholder="One line on what you think it would show."></textarea>
         </div>
       </section>
 
@@ -179,9 +185,9 @@
 <footer class="foot"><div class="wrap">
   <p>An observation log of autonomous-agent behaviour in a sealed arena. Every finding is drawn from host-side ground truth, not the contestants' own accounts.</p>
   <div class="cols">
-    <div><b>Source of record</b><br>referee · firewall logs · shared-channel backing store · session transcripts</div>
-    <div><b>Not the source</b><br>the contestants' own histories, which this project exists to distrust</div>
-    <div><b>Status</b><br>ongoing · 2026</div>
+    <div><b>Source of record</b>referee · firewall logs · shared-channel backing store · session transcripts</div>
+    <div><b>Not the source</b>the contestants' own histories, which this project exists to distrust</div>
+    <div><b>Status</b>ongoing · 2026</div>
   </div>
 </div></footer>
 
@@ -618,18 +624,5 @@ $('#submit').addEventListener('click', async () => {
 sync();
 </script>
 
-<script>
-const root=document.documentElement, themeBtn=document.getElementById('theme');
-const currentTheme=()=>root.getAttribute('data-theme')||(matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light');
-const syncTheme=()=>themeBtn.setAttribute('aria-pressed',String(currentTheme()==='dark'));
-syncTheme();
-themeBtn.addEventListener('click',()=>{
-  const next=currentTheme()==='dark'?'light':'dark';
-  root.setAttribute('data-theme',next);
-  syncTheme();
-  try{localStorage.setItem('arena-theme',next)}
-  catch(e){console.warn('theme: preference not persisted —',e.message)}
-});
-</script>
 </body>
 </html>
